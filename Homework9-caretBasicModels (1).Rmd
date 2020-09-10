@@ -1,0 +1,512 @@
+---
+title: "Homework 9 - Vanilla and Regularized Regression Models and caret"
+author: "Student"
+output:
+  word_document: default
+---
+
+**Note:  every time you need to use `set.seed()`, please do `set.seed(2019)` so that we all inject the same type of randomness into our code and come to the same answers!  Also, a lot of this stuff is fairly computationally intensive, so knitting will take up to a few minutes (my mid-2015 MacBook Pro took 1.5 minutes, with Q3e and Q3f taking the longest) since it runs all lines of code from scratch whenever the knit button is pressed.**
+
+```{r setup, include=FALSE}
+#do not change this code
+knitr::opts_chunk$set(echo = TRUE,collapse=TRUE)
+library(regclass)
+library(e1071)
+library(caret)
+library(arules)
+library(pROC)
+RNGkind(sample.kind = "Rounding")
+```
+
+**Note:  every time you need to use `set.seed()`, please do `set.seed(2019)` so that we all inject the same type of randomness into our code and come to the same answers!  Also, a lot of this stuff is fairly computationally intensive, so knitting will take up to a few minutes (my mid-2015 MacBook Pro took 1.5 minutes, with Q3e and Q3f taking the longest) since it runs all lines of code from scratch whenever the knit button is pressed.**
+
+
+
+1.  The AUC (area under the ROC curve) is often used in business analytics to gauge the utility of a model because it tells us how well the model ranks probabilities.  If a company needs to select the "500 customers most likely to ...", then the higher the value of AUC, the better the model will be at coming up with a list.  
+
+The numerical value of the AUC can be interpreted as follows.  If a random member of the "Yes" class is selected along with a random member of the "No" class, and the model scores both of them, the AUC tells us the probability that the model would give a higher score to the member of the Yes class.
+
+In this problem you will write a function called `pairwise_auc` which takes two arguments:  `actual` (a vector of class labels) and `predicted` (a vector of scores or probabilities given by a model); no default values of the arguments.  
+
+Your function will systematically consider each pair of individuals (with one being from the "Yes" class and the other being from the "No" class) and find the fraction of pairs whose scores/probabilities are ranked correctly.  This fraction gives a good approximation to the AUC.
+
+As with all functions, it's best to build this up in pieces.  Let's work with the following definitions of `actual` and `predicted`.
+
+```{r Q1}
+set.seed(20190); actual <- sample( factor( rep( c("Yes","No"), 8) ) )  #actual classes
+actual
+set.seed(20190); predicted <- round( runif(16,1,100), digits=4 ) #random numbers between 1 and 100
+predicted
+```
+
+a)  Make a dataframe called `VALUES` whose first column contains the elements of `actual` and whose second column contains the elements of `predicted` (the columns should be named "actual" and "predicted", respectively).  Include the results of running `head`.
+
+```{r Q1a}
+VALUES <- data.frame(actual,
+                     predicted)
+head(VALUES,3)    
+#  actual predicted
+#1     No   86.7908
+#2    Yes   86.6328
+#3    Yes    3.8268
+```
+
+**Grading:** 0.5 points
+
+b)  Make two new dataframes:  `YES` and `NO` which contain the rows in `VALUES` corresponding to "Yes" class and which contain the rows in `VALUES` corresponding to the "No" class, respectively.  Include the output of the two `head` commands.
+
+```{r Q1b}
+YES <- subset(VALUES,
+              actual == "Yes")
+
+NO <- subset(VALUES,
+             actual == "No")
+
+head(YES,3)
+#  actual predicted
+#2    Yes   86.6328
+#3    Yes    3.8268
+#6    Yes   96.2489
+head(NO,3)
+#  actual predicted
+#1     No   86.7908
+#4     No   70.2014
+#5     No    2.9181
+```
+
+**Grading:** 0.5 points
+
+c)  Consider the score in the second row of `YES` (3.8268).  By taking the `mean` of a logical condition, find the fraction of scores in `NO` that are smaller than this score and left-arrow it into a variable called `p.correctrank`.  Print the contents of `p.correctrank` to the screen.  You should find this is 0.125.
+
+```{r Q1c}
+mean(YES$predicted[2] > NO$predicted)
+
+```
+
+**Grading:** 0.5 points
+
+d)  Now write a `for` loop that does this for each score in `YES`.  In other words, define `p.correctrank` to be an empty vector, then write a `for` loop that defines the first element of `p.correctrank` to be the fraction of scores in `NO` that are smaller than the score in the first row of `YES`, defines the second element of `p.correctrank` to be the fraction of scores in `NO` that are smaller than the score in the second row of `YES`, etc.   Print out the 8 elements of `p.correctrank` to the screen.
+
+```{r Q1d}
+p.correctrank <- c()
+for (i in 1:nrow(YES)) {
+  p.correctrank[i] <- mean(YES$predicted[i] > NO$predicted)
+}
+
+```
+
+**Grading:** 0.5 points
+
+e)  Left-arrow into `AUC` the average of the values in `p.correctrank`.  The average of this vector gives the overall fraction of pairs of individuals who scores are ranked correctly, so it gives a good approximation to the AUC.  Print the contents out to the screen and verify it equals 0.671875.
+
+```{r Q1e}
+AUC <- mean(p.correctrank)
+AUC
+```
+
+**Grading:** 0.5 points
+
+
+f)  Now modify your code so that it works inside the function  `pairwise_auc`.  Remember that the two arguments will be the vectors `actual` and `predicted` (you can assume that `actual` will always contain "Yes" and "No" and `predicted` will be a vector of numbers).  Make sure you `return` the value of the AUC!  
+
+Test your function on the vectors `scores.for.individuals` and `actual.classes` defined by the code below (probabilities/classes for wine quality).  You should find an answer close to 0.858.  Note:  the `roc` function we have been using to calculate the areas under the ROC curve proceeds in a different way to estimate the AUC, so its value can be quite different (as it is for this example).
+
+```{r Q1f}
+
+pairwise_auc <- function(actual, predicted) {
+  VALUES <- data.frame(actual,predicted)
+  YES <- subset(VALUES,
+                actual == "Yes")
+  NO <- subset(VALUES,
+               actual == "No")
+  p.correctrank <- c()
+  for (i in 1:nrow(YES)) {
+    p.correctrank[i] <- mean(YES$predicted[i] > NO$predicted)
+  }
+  return(mean(p.correctrank))
+}
+
+
+
+
+
+library(regclass); library(caret)
+data(WINE)
+set.seed(2019); MODEL <- train(Quality~.,data=WINE,method="knn",
+                           trControl=trainControl(method="none",classProbs=TRUE), tuneGrid=expand.grid(k=12))
+scores.for.individuals <- predict(MODEL,newdata=WINE,type="prob")[,2]
+actual.classes <- factor( ifelse(WINE$Quality=="low","Yes","No") )
+pairwise_auc(actual.classes,scores.for.individuals)  
+
+library(pROC)
+roc(actual.classes,scores.for.individuals)  #AUC estimated by `roc` uses a slightly different procedure
+
+
+```
+
+**Grading:** 1 points.  They don't need the output from `roc`, that was just to illustrate the differences.
+
+***************
+
+2.  Weller Ross, a Business Analytics graduate from UT and current analytics coordinator for the Houston Texans, collected a TON of data regarding NFL teams with the hopes of developing a predictive model for *the number of wins next season* `Next.Years.Wins` based on the performance of the team in the current season.  The `EX3.NFL` data is the result, and it's in `regclass`.  The the following code chunk, which fills in the number of wins for the 2013 season (you'll need to make sure `wins2013.txt` lives in the same folder as everything else).
+
+```{r Q2setup}
+data("EX3.NFL")
+EX3.NFL$Next.Years.Wins[which(is.na(EX3.NFL$Next.Years.Wins))] <- scan("wins2013.txt")
+```
+
+a.  To be on the safe side, Weller threw "everything under the sun" into the dataset.  This is a double-edged sword.  Many columns are near duplicates of each other (or linear combinations, e.g. Total Yards = Rushing Yards + Passing Yards, if those 3 columns existed in the data), and it might be the case that some columns have very low information density.  Use the output of `nearZeroVar`, `findCorrelation`, and `findLinearCombos` to discuss the presence (or absence) of these issues.  Note 1:  follow the examples in the activity.  Note 2:  the later two of these functions only work for numeric columns.  I've included a command that creates a vector of column positions to help you out (i.e., run these commands on `EX3.NFL[,numerics]`).
+
+```{r Q2a}
+DF <- data.frame (Var = c(rep(0,999),0),
+                  NearZero = c(rep(0,999),0.1),
+                  Variation = rnorm(1000))
+
+infodensity <- nearZeroVar(EX3.NFL, saveMetrics= TRUE)
+infodensity[infodensity$nzv,]
+
+numerics <- which( unlist(lapply(EX3.NFL,class)) %in% c("numeric","integer" ) )
+highlycorrelated <- findCorrelation( cor(EX3.NFL[ , numerics]) , cutoff = .90)
+highlycorrelated 
+length(highlycorrelated)
+
+comboInfo <- findLinearCombos(EX3.NFL[,numerics])
+VECTOR <- unlist(as.vector(comboInfo[[1]][2]))
+names(EX3.NFL[,comboInfo$remove])
+comboInfo$remove
+
+```
+
+**Response:**  There are no variables that have zero variance, therefore all the variables in the dataset can be useful.
+
+**Grading:**  1 point
+
+
+b.  If you were on your own, you'd think carefully about which columns to remove and which to keep.  We will take the "easy" way out and `NULL` out all columns suggested by `findCorrelation` and `findLinearCombos` functions.  Full disclosure:  when two variables are highly correlated, I'm unsure exactly how `caret` decides which one to keep; and when variables are linear combinations of each other, I'm unsure exactly how `caret` decides which one to eliminate.
+
+The updated dataset is left-arrowed in `NFL`, and you'll use this dataset from now on.  What fraction of rows are missing values in `NFL`?
+
+
+```{r Q2b}
+#Fast way to simply eliminate all highly correlated predictors and predictors that are linear combination.
+NFL <- EX3.NFL[, -which(names(EX3.NFL) %in% names(EX3.NFL[,numerics])[c(highlycorrelated,comboInfo$remove)] )]
+#Remove Team as well
+NFL$Team <- NULL
+dim(NFL) #352 98
+
+mean( ! complete.cases(NFL)) #0.2 #0.04
+
+```
+
+**Response:**  0 rows are missing in the NFL because the mean is 0
+
+
+**Grading:**  0.5 points
+
+
+c.  We will skip trying to symmetrize the predictors since there are still a tremendous number of columns (remember, about 80% of your time "doing" analytics is just in the data cleaning stage).  Let's split the data into training and holdout.  In this case, instead of doing this randomly, we're going to let the training rows be all rows from 2011 and before.  In effect, we are going to use the year 2012 (with information on the number of wins in 2013) as the holdout sample.  Further, let's estimate the generalization error with our favorite:  5-fold cross-validation.  Verify the result of running head, then *report what the naive model would predict for the number of wins* (which will be the same prediction for all teams on the training, holdout, in the future, etc.).
+
+
+```{r Q2c}
+TRAIN <- subset(NFL,
+       Year <= 2011)
+
+HOLDOUT <- subset(NFL,
+       Year > 2011)
+
+fitControl <- trainControl(method="cv",number=5)
+
+set.seed(2019); GLM <- train(Next.Years.Wins~.,
+                             data=TRAIN,
+                             method='glm',
+                             trControl = fitControl ,
+                             preProc = c("center","scale"))
+
+
+
+head(TRAIN[,1:5])
+#  Year Next.Years.Wins Wins X2.Off.Tot.Plays X3.Off.Tot.Yds.per.Ply
+#1 2002               4    5             1003                    4.5
+#2 2003               6    4              981                    4.6
+#3 2004               5    6             1047                    4.3
+#4 2005               5    5             1075                    5.2
+#5 2006               8    5              999                    5.0
+#6 2007               9    8             1016                    5.4
+
+```
+
+**Grading:**  1 point
+
+d.  Using `train`, fit the multiple linear regression model on `TRAIN` (remember to have the `preProc` argument in `train`, and remember to have `set.seed(2019)` on the same line, immediately before `train`) and include the `$results` component of the object created so that the estimated generalization error is printed to the screen.
+
+```{r Q2d}
+set.seed(2019); GLM <- train(Next.Years.Wins~.,
+                             data=TRAIN,
+                             method='glm',
+                             trControl=fitControl,
+                             preProc = c("center","scale"))
+GLM$results
+
+#Sanity Check:  last 3 numbers in output should be 0.390702 0.06579662 0.3750177
+```
+
+**Grading:**  1 point
+
+
+e.  Use the following definition of `glmnetGrid` to define the combination of parameters a regularized regression model will search over.  
+
+*  How many possible combinations of parameters are we considered? (Response 1)  
+
+* Run `train` to audition each of these models, include a `plot` of the object created by `train` to see how the estimated generalization error changes with these two parameters, and print to the screen the row of the `$results` component of that object that shows the best parameters and the estimated generalzation error.  
+
+*  Is there compelling evidence that this is "better" than the vanilla linear regression?  Why or why not? (Response 2)
+
+
+```{r Q2e}
+glmnetGrid <- expand.grid(alpha = seq(0,1,.25),
+                          lambda = 10^seq(-4,-1,by=.5))   
+
+set.seed(2019); GLMnet <- train(Next.Years.Wins~.,
+                                data=TRAIN,
+                            method='glmnet',
+                            tuneGrid=glmnetGrid,
+                            trControl=fitControl,
+                            preProc = c("center","scale"))
+plot (GLMnet)
+GLMnet$bestTune 
+GLMnet$results[rownames(GLMnet$bestTune),]
+
+
+#Sanity check:  last 3 numbers in row with best parameters should be 0.2140386 0.07343775 0.220582
+```
+
+**Response 1:**  24 possible parameters
+
+**Response 2:**  This is better than the vanilla regression because it is about 2.4 standard deviations away from the regularized regression.
+
+**Grading:**  1.5 points.  
+
+
+
+f.  Use `train` and perform a search over `k` for a nearest neighbors model auditioning values of `k` along the sequence 10, 15, 20, ..., 65, 70.  Include a `plot` of the object created by `train` to see how the estimated generalization error changes with `k`, and print to the screen the row of the `$results` component of that object that shows the best parameters and the estimated generalzation error.
+
+```{r Q2f}
+knnGrid <- expand.grid(k=seq(from = 10,to= 70,by = 5))
+
+fitControl <- trainControl(method = "cv", number = 5)
+
+set.seed(2019) ; KNN <- train(Next.Years.Wins~.,
+                             data = TRAIN,
+                             method = 'knn',
+                             tuneGrid = knnGrid,
+                             trControl = fitControl,
+                             preProc = c("center", "scale"))
+
+plot(KNN)
+KNN$results
+KNN$bestTune
+KNN$results[rownames(KNN$bestTune),]
+
+
+
+#Sanity check:  last 3 numbers in best row should be 0.1025178 0.04498682 0.06140275
+```
+
+**Grading:**  1 for output of model
+
+g.  So what's the verdict?  What model(s) can you eliminate from consideration?  Which model would you select?
+
+**Response:**  Model 10 is the best model because it has the smallest RMSE and a K nearest neighbors of 55. The models are all within 1 standard deviation of each other, so they are all good models, but the KKN model is better than the vanilla regression because of the standard deviation.
+
+
+**Grading:**  1 point 
+
+
+
+
+h.  Out of curiosity, let's see how well each of the three models did on the holdout sample using the `postResample` command from `caret`.  Run `postResample` to find the RMSE on the holdout.  Remember to put `set.seed(2019)` on the same line, immediately before `postResample` for the nearest neighbor model (since if they are any ties, they get broken at random).  Are any of the models overfit (actual generalization error about 10% or more than what was estimated with crossvalidation)?    Remember, the holdout sample only serves as a sanity check to make sure the selected model is not overfit; we do not change our choice of model if a different one did better on the holdout.
+
+```{r Q2h}
+postResample(predict(GLM, newdata = HOLDOUT), HOLDOUT$Next.Years.Wins)
+postResample(predict(GLMnet, newdata = HOLDOUT), HOLDOUT$Next.Years.Wins)
+set.seed(2019);postResample(predict(KNN, newdata = HOLDOUT), HOLDOUT$Next.Years.Wins)
+
+
+
+```
+
+**Response:**  The model does better than the holdout, and the estimated error was higher than predicted, but it is not overfit.
+
+
+**Grading:**  1 point 
+
+
+i.  You should have found that the optimal value of `alpha` for regularized regression was 1, which corresponds to the lasso.  The great thing about the lasso is that it can set some coefficients to 0 (the only value of `alpha` that allows that in fact).  Print to the screen the column names (there are 57, and this creates over a page of output; don't worry, it's not excessive since I'm asking for it) of the variables that get a coefficient of zero in the optimal regularized regression model.  Based on your analysis, does this year number of wins help predict next year's wins?  Explain why or why not.
+
+Note: the vector `GLMnet$finalModel$xNames[ which( as.numeric(coef(GLMnet$finalModel,GLMnet$bestTune$lambda)) == 0 ) - 1 ]` gives you a vector of all predictor names that get a coefficient of 0 in the model.
+
+
+```{r Q2i}
+GLMnet$finalModel$xNames[ which( as.numeric(coef(GLMnet$finalModel,GLMnet$bestTune$lambda)) == 0 ) - 1 ]
+```
+
+**Response:**  No, having coefficient of zero does not have an impact, and knowing the number of wins this year does not help predict the number of wins for next year. 
+
+**Grading:**  1 point total
+
+
+***************
+
+3.  The `ACCOUNT` data in `regclass` deals with customers of a bank and whether they have or have not purchased into a new type of CD account offered by the bank (the `Purchase` column, levels are `Yes` and `No`).
+
+```{r Q3setup}
+data(ACCOUNT)
+summary(ACCOUNT)
+```
+
+a.  The `Tenure`, `CheckingBalance`, `SavingBalance`, and `Income` columns are all quite skewed.  Logistic regression models tend to be more effective when predictors are symmetric, so let's replace the values in each column with the `log10` of their values to symmetrize them.  However, we need to be careful:  the smallest values for all but `Tenure` are 0 or negative, and we cannot take the logarithm of that!  Thus, for all but `Tenure` add an appropriate number to the column so that its minimum value is 1 before taking the log.  For example, if the smallest value in a column was -2.6, you'd need to add 3.6 and then take the log, e.g. `log10(x+3.6)`.   Verify you can produce the following sanity check.
+
+```{r Q3a}
+ACCOUNT$Tenure <- log10 (ACCOUNT$Tenure)
+ACCOUNT$CheckingBalance <- log10(ACCOUNT$CheckingBalance + 775.83)
+ACCOUNT$SavingBalance <- log10(ACCOUNT$SavingBalance  + 1)
+ACCOUNT$Income <- log10(ACCOUNT$Income + 1)
+
+ACCOUNT[c(1,5,7,9),c(2,3,4,5)]
+#      Tenure CheckingBalance SavingBalance   Income
+#1 0.04139269        2.889767     0.0000000 0.602060
+#5 0.89209460        2.889767     0.0000000 1.041393
+#7 1.04139269        2.929649     3.5210334 1.113943
+#9 0.49136169        3.266991     0.3996737 1.230449
+```
+
+**Grading:**  1 point.
+
+b.  Split the data into 70% training and 30% holdout (use the 2019 seed).  Define `fitControl` so that the AUC will be computed.  What class would the naive model predict for everyone?  What is the naive model's accuracy on the training data and on the holdout sample?
+
+```{r Q3b}
+fitControl <- trainControl (method="cv",
+                            number=5,
+                            summaryFunction=twoClassSummary,
+                            classProbs=TRUE)
+
+set.seed(2019); train.rows <- sample(1:nrow(ACCOUNT),0.70*nrow(ACCOUNT))
+TRAIN <- ACCOUNT[train.rows,]
+HOLDOUT <- ACCOUNT[-train.rows,]
+
+
+
+
+head(TRAIN[,1:5])
+#      Purchase      Tenure CheckingBalance SavingBalance   Income
+#18664       No  0.36172784        4.101822      3.387463 2.025306
+#17280       No -0.09691001        2.958784      0.000000 1.146128
+#7354        No  1.19865709        3.721622      0.000000 1.414973
+#14986      Yes -0.30103000        2.889767      3.411237 1.518514
+#1224        No  0.36172784        3.830186      0.000000 1.792392
+#1048        No  0.50514998        3.023680      0.000000 1.255273
+
+
+
+
+```
+
+**Response:** 
+
+
+**Grading:**  1 point
+
+
+c.  Although arguments could be made for both metrics, explain why the bank would likely prefer to have models tuned for their AUC instead of Accuracy (if you were the bank, what would you be most interested in using this model for)?
+
+**Response:** 
+
+
+**Grading:**  1 point.
+
+d.  Using `train`, fit the vanilla logistic regression model on `TRAIN` (remember to have the `preProc` argument in `train`, and remember to have `set.seed(2019)` on the same line, immediately before `train`) and include the `$results` component of the object created so that the estimated generalization error is printed to the screen.  Remember to ignore the warning `The metric "Accuracy" was not in the result set. ROC will be used instead.` because this is exactly what we wanted measured!
+
+```{r Q3d,warning=FALSE}
+set.seed(2019); GLM <- train(Purchase~.,
+                                data=TRAIN,
+                            method='glm',
+                            trControl=fitControl,
+                            preProc = c("center","scale"))
+
+GLM$results
+
+
+#Sanity check:  last 3 numbers in the best row  should be 0.009377586 0.004458781 0.02013125
+```
+
+**Grading:**  1 point.
+
+
+e.  Define `glmnetGrid` to be all combinations where `alpha` is along the sequence 0, 0.1, 0.2, ..., 0.9, 1, and `lambda` is 10 raised to the sequence of powers -3, -2.5, -2, ..., -1, -0.5.  Run `train` to audition each of these models, include a `plot` of the object created by `train` to see how the estimated generalization error changes with these two parameters.  Print to the screen the row of the `$results` component of that object that shows the best parameters and the estimated generalzation error.   How many different models did `train` evaluate?
+
+
+```{r Q3e}
+glmnetGrid <- expand.grid(alpha = seq(0,1,.1),lambda = 10^seq(-3,-0.5,by=.5))   
+set.seed(2019); GLMnet <- train(Purchase~.,
+                                data = TRAIN,
+                                method = "glmnet",
+                                tuneGrid= glmnetGrid,
+                                trControl = fitControl,
+                                preProc = c("center", "scale"))
+GLMnet$results[rownames(GLMnet$bestTune),]
+plot(GLMnet)
+nrow({(glmnetGrid)
+
+
+#Sanity check:  last 3 numbers in the best row should be 0.009424886 0.004309691 0.01751445
+
+```
+
+**Response:**  
+
+
+**Grading:**  1 point.
+
+
+f.  Use `train` and audition nearest neighbor models with `k` along the sequence 5, 10, 15, ..., 50, 55, 60.  Include a `plot` of the object created by `train` to see how the estimated generalization error changes with `k`, and print to the screen the row of the `$results` component of that object that shows the best parameters and the estimated generalzation error.  Model fitting may take a minute or so.
+
+```{r Q3f}
+knnGrid <- expand.grid(k = seq(from =5, to= 60, by = 5))
+set.seed(2019) ; k <- train(Purchase~.,
+                              data = TRAIN, 
+                              method = "knn",
+                              tuneGrid = knnGrid,
+                              trControl = fitControl,
+                              preProc = c("center", "scale"))
+k$results
+k$bestTune
+plot(k)
+k$results[rownames(k$bestTune),]
+
+
+
+#Sanity check:  last 3 numbers in the best row should be 0.007539772 0.002914069 0.01533104
+```
+
+**Grading:**  1 point.
+
+g.  So what's the verdict?  What model(s) can you eliminate from consideration?  Which model would you select?
+
+**Response:**  The GLMnet model can be eliminated because the prediction is over 3 standard deviations above the best model which is the k model.
+
+**Grading:**  1 point.
+
+h.  Out of curiosity, let's see how well each of the three models did on the holdout sample using the `roc` command.  Remember to put `set.seed(2019)` on the same line, immediately before `roc` for the nearest neighbor model (since if they are any ties, they get broken at random).  Are any of the models overfit (actual AUC about 10% or more less than what was estimated with crossvalidation)?    Remember, the holdout sample only serves as a sanity check to make sure the selected model is not overfit; we do not change our choice of model if a different one did better on the holdout.
+
+
+
+```{r Q3h}
+set.seed(2019)
+roc(actual,predicted,plot=TRUE,xlab="True Negative Rate",ylab="True Positive Rate",grid=c(.1,.1))
+
+```
+
+**Response:**  The KKN model is the best of these choices.
+
+**Grading:**  0.5 point.
+

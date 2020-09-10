@@ -1,0 +1,467 @@
+---
+title: "Homework 3 - Conditional Programming and Nested Loops"
+author: "Ishan Biswas"
+date: "Due June 9, 2020"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+#Do not change anything in this chunk
+options(width=150)
+knitr::opts_chunk$set(echo = TRUE,collapse=TRUE)
+library(regclass); library(lubridate)
+```
+
+**************
+
+Question 1:  Set up an `if`/`else` statement (one for each bullet) that  
+
+  *  defines a variable `x` to equal "positive" if `num` is 0 or more and "negative" if `num` is less than 0.
+
+  *  defines a variable `x` to equal "tiny" if `num` is a value between -8 and 8 (inclusive) and "huge" otherwise.
+
+  *  defines a variable `x` to equal "small even" if `num` is an even number from -6 to 6 (inclusive) and "not small even" otherwise
+
+  *  defines a variable `x` to equal "extraordinary" if `num` is evenly divisible by either 2, 3, or 5 and "ordinary" otherwise.  Note:  a value `num` is evenly divisible by a number `y` when `num%%y` equals 0.  The `%%` symbol stands for "the remainder after dividing by".  For example `7%%3` equals 1 since 1 is the remainder after 7 is divided by 3.
+
+Left-arrow `num` to be -6.  For each of four bullets, run your code, then print to the screen the contents of `x` to verify that it equals the intended value.  Then, do the same for when `num` is left-arrowed to be 29.  If it's unclear what is being asked for here, refer to the Practice Set 4 solutions (posted Thursday evening) problems Conditional 2 and Conditional 10.
+
+
+```{r Q1}
+num <- -6
+if(num >=0) { x <- "positive" } else { x <- "negative" }
+x
+
+if(num >= -8 & num <= 8) { x <- "tiny" } else { x <- "huge" }
+x
+
+if(num %in% seq(from=-6,to=6,by=2)) { x <- "small even" } else { x <- "not small even"}
+x
+
+if( num%%2==0 | num%%3==0 | num%%5==0 ) { x <- "extraordinary" } else { x <- "ordinary" }
+x
+
+num <- 29
+if(num >=0) { x <- "positive" } else { x <- "negative" }
+x
+
+if(num >= -8 & num <= 8) { x <- "tiny" } else { x <- "huge" }
+x
+
+if(num %in% seq(from=-6,to=6,by=2)) { x <- "small even" } else { x <- "not small even"}
+x
+
+if( num%%2==0 | num%%3==0 | num%%5==0 ) { x <- "extraordinary" } else { x <- "ordinary" }
+x
+
+
+
+```
+
+**Grading:**  2 points (0.25 each). 
+
+
+
+**************
+
+Question 2:  Discretizing numerical variables (i.e., turning them into categorical variables) is a common task in data mining.  In fact, later on in the course, we will see that a predictive model's accuracy can increase when a numerical quantity is treated as a set of categories.
+
+The `JUNK` dataset in `regclass` records the word, character, and punctuation frequencies of emails along with a classification as to whether they are junk or safe.  
+
+```{r Q2 loadin data}
+library(regclass); data(JUNK)
+```
+
+a.  Use `ifelse` to create a categorical variable called `hasmoney` that takes the values "Yes" (when the `money` column of `JUNK` is greater than 0) and "No" (when the `money` column of `JUNK` equals 0).  Provide a `summary` (not `table`) of `hasmoney`.  Remember to use `factor`!
+
+```{r Q2a}
+hasmoney <- factor( ifelse(JUNK$money>0,"Yes","No") )
+summary(hasmoney)
+```
+
+**Grading:** 0.5 points.  
+
+
+b.  Use `ifelse` to create a categorical variable called `salesrelated` that takes on the values "Yes" (when any one of the `make`, `order`, `free`, or `money` columns has a value greater than 0) and "No" (if none of them do).  Provide a `summary` (not `table`) of `salesrelated`.
+
+```{r Q2b}
+salesrelated <- factor( ifelse(JUNK$make > 0 | JUNK$order >0 | JUNK$free >0 | JUNK$money>0,"Yes","No") )
+summary(salesrelated)
+
+```
+
+**Grading:** 0.5 points.  
+
+
+
+c.  Using a `for` loop and either sequential or nested `if`s, create a categorical variable called `exclaim` that equals:
+
+* "None" - when the value in the `exclamation` column is 0
+* "Low" - when the value in the `exclamation` column is greater than 0 but 0.10 or less.
+* "Medium" - when the value in the `exclamation` column is greater than 0.10 but 0.40 or less.
+* "High" - when the value in the `exclamation` column is greater than 0.4 
+
+Provide a `summary` (not `table`) of `exclaim`.  Good practice (but not required):  order the levels in numerical order instead of alphabetical order.
+
+```{r Q2c}
+exclaim <- c()
+for (i in 1:nrow(JUNK)) {
+  if( JUNK$exclamation[i] == 0 ) { exclaim[i] <- "None" }
+  if( JUNK$exclamation[i] > 0 & JUNK$exclamation[i] <= 0.10 ) { exclaim[i] <- "Low" }
+  if( JUNK$exclamation[i] > 0.10 & JUNK$exclamation[i] <= 0.40 ) { exclaim[i] <- "Medium" }
+  if( JUNK$exclamation[i] > 0.40 ) { exclaim[i] <- "High" }
+}
+
+
+exclaim <- c()
+for (i in 1:nrow(JUNK)) {
+  if( JUNK$exclamation[i] == 0 ) { exclaim[i] <- "None" } else { 
+    if( JUNK$exclamation[i] > 0 & JUNK$exclamation[i] <= 0.10 ) { exclaim[i] <- "Low" } else { 
+     if( JUNK$exclamation[i] > 0.10 & JUNK$exclamation[i] <= 0.40 ) { exclaim[i] <- "Medium" } else {
+        exclaim[i] <- "High" } } } 
+}
+
+
+
+exclaim <- factor(exclaim)
+summary(exclaim)
+
+
+exclaim <- factor(exclaim,ordered=TRUE,levels=c("None","Low","Medium","High"))
+summary(exclaim)
+
+
+
+```
+
+**Grading:** 1 point.   Ordering the levels is just for practice (no bonus points).
+
+**************
+
+Question 3:  Consider the `CHURN` dataset from `regclass`.  Soon we will be turning our attention to developing a model that predicts whether someone will cancel their contract (`Churn` column, Yes/No) based on their calling behavior.  
+
+For now, we are going to study the values in the `totalintlcalls` column.  The goal is to define each element of a matrix called `INRANGE`.  The value in row `lower` and column `upper` (i.e., `INRANGE[lower,upper]`) will give the number of values in the `totalintlcalls` column that are between `lower` and `upper` (inclusive).  For example, `INRANGE[6,9]` would equal 1123 since 1123 values in the `totalintlcalls` column are at least 6 but no greater than 9.
+
+Such an analysis could be useful if we wanted to discretize the values of `totalintlcalls` into a "smart" set of categories like low/medium/high, e.g., by finding the "shortest" (i.e. containing the fewest values) interval that contains 50% of the observed values.
+
+The goal is to write a nested `for` loop to define each element of `INRANGE` one by one.  Let's build up the code slowly and play around with a test case:  finding the number of elements that are at least 3 and at most .....
+
+a.  Initialize `counts` to be an empty vector.  Using a `for` loop, you are going to store in the `i`-th element of `counts` the number of values in `totalintlcalls` that are at least 3 but no greater than `i`, but let's get the code worked out a specific test case first. 
+
+```{r Q3a}
+library(regclass); data(CHURN)
+counts <- c()
+
+```
+
+**Grading:**  No points here, just loading in the data and defining the empty vector. 
+
+b.  Define `counts[7]` to be the number of elements in `totalintlcalls` that are between 3 and 7 (inclusive).  You'll find this equals 3454.  Print `counts` to the screen and you'll see the first 6 elements are `NA` (haven't yet been defined) and the 7th is 3454.
+
+```{r Q3b}
+counts[7] <- length(which(CHURN$totalintlcalls >= 3 & CHURN$totalintlcalls <= 7))
+counts
+```
+
+**Grading:**  1 point 
+
+
+c.  Now that you have the code working for the test case, write a `for` loop with a looping variable named `upper` that goes along the integer sequence 1, 2, ..., 20 and puts into `counts[upper]` the number of elements in `totalintlcalls` that are between 3 and `upper` (inclusive).   Print `counts` to the screen.  A sanity check is provided.  The first two elements are 0 because it's impossible for a number to be at least 3 but less than or equal to 1, etc.  Now that the "inner loop" is working, it's time to write the outer loop and finish the task.
+
+```{r Q3c}
+
+for( upper in 1:20) { counts[upper] <- length(which(CHURN$totalintlcalls >= 3 & CHURN$totalintlcalls <= upper)) }
+counts
+
+```
+
+**Grading:**  1 point 
+
+
+
+d.  Define `INRANGE` to be a matrix of all 0s with 20 rows and columns via `INRANGE <- matrix(0,nrow=20,ncol=20)`.  Your `for` loop in (c) hard-coded a value of 3 for `lower`, and that code will serve as the "inner" loop.  Generalize your code so that the outer loop has a looping variable named `lower` and that the appropriate element of `INRANGE` gets defined (rather than left-arrowing the appropriate count into some position in the `counts` vector).  Your code might not even need to use `counts` at all!  A small sanity check is provided.  Provide the results of `INRANGE[6:9,16:19]`, `mean(INRANGE)`, `median(INRANGE)`, and use `which` with additional argument `arr.ind=TRUE` to print out the three row/column pairs that have the number 6.
+
+```{r Q3d}
+INRANGE <- matrix(0,nrow=20,ncol=20)
+for (lower in 1:20) { 
+  for (upper in 1:20) {
+    INRANGE[lower,upper] <- length(which( CHURN$totalintlcalls >= lower & CHURN$totalintlcalls <= upper ) )
+  }}
+
+INRANGE[6:9,16:19]
+
+mean(INRANGE)
+
+median(INRANGE)
+
+which(INRANGE==6,arr.ind=TRUE)
+
+INRANGE[4:6,9:12]
+
+```
+
+**Grading:**  2 points 
+
+
+
+e.  (optional; 1 point extra credit if you get it, but we want you to figure out how to do this on your own, so no TA/Prof help)  Find the shortest interval (e.g. the interval 9-13 is shorter than the interval 10-15 because 9-13 has fewer values) that contains at least 50% of the values in `totalintlcalls`.  If there is a tie for shortest interval, choose the one that contains closest to exactly 50% of values.
+
+```{r Q3e}
+POTENTIAL <- which(INRANGE >= 0.5*length(CHURN$totalintlcalls),arr.ind=TRUE)
+interval.length <- c()
+for (i in 1:nrow(POTENTIAL)) { 
+  interval.length[i] <- POTENTIAL[i,2] - POTENTIAL[i,1] }
+which(interval.length==min(interval.length))
+
+POTENTIAL[which(interval.length==min(interval.length)), ]
+
+INRANGE[2,4]/length(CHURN$totalintlcalls)
+
+INRANGE[3,5]/length(CHURN$totalintlcalls)
+
+
+
+```
+
+**Grading:**  1 point extra credit, but all or nothing (no partial credit).
+
+**************
+
+Question 4:  A leap year (one that has Feb 29) occurs when:
+
+* the year is divisible by 4  (2008, 2012, 2016, 2020, etc. are leap years)
+  * except when the year is divisible by 100 (2100, 2200, 2300, etc. are NOT leap years) 
+     * unless the year is divisible by 400 (1600, 2000, 2400, etc. ARE leap years)
+
+Define a vector called `leapyear` that is initially empty (or put whatever you want in it as long as it has 241678 elements).  Then write a `for` loop to make the `i`-th element of `leapyear` equal to "yes" if the `i`-th element of `years` (defined below as the integer sequence from 1 to 241678) is a leap year, and "no" otherwise.  Once this is done, print to the screen `leapyear[c(2018,2020,2100,2200,2300,2400,2404)]`, the result of running `tail(leapyear)` (you should find a bit over 58000 yes's), and the result of running `table(leapyear)`.
+
+Tips for `for` loop and conditionals:
+
+ *  It is possible to use single (but complex) logical statement to determine whether the year is a leap-year (and feel free to write the code this way).  However, I think it is easier to check these three conditions with sequential or nested `if`s.  
+ 
+ *  One way.  Set the `i`-th element of `leapyear` to "no".  If `i` is divisible by 4, then set the `i`-th element of `leapyear` to "yes".  If `i` is divisible by 100, then set the `i`-th element of `leapyear` back to "no".  If `i` is divisible by 400, then set the `i`-th element of `leapyear` back to "yes".
+ 
+ *  As you are trying out test cases, try 1996 (yes), 2000 (yes), and 2100 (no).
+ 
+ *  Note:  the expression `x %% n` evaluates to 0 if `x` is divisible by `n` and a number greater than 0 when `x` is not divisible by `n`.
+
+```{r Q4}
+2008%%4  #equals 0 since 2008 is divisible by 4
+2013%%4 #does not equal 0 since 2013 is not divisible by 4 (equals 1 since remainder after dividing by 4 is 1)
+2100%%100 #equals 0 since 2100 is divisible by 100
+2119%%100 #does not equal 0 since 2119 is not divisible by 100 (equals 19 since remainder after dividing by 100 is 19)
+
+
+years <- 1:241678
+leapyear <-  c()
+for (i in 1:length(years)) { 
+  leapyear[i] <- "no"
+  if( years[i] %% 4 == 0 ) { leapyear[i] <- "yes" }
+  if( years[i] %% 100 == 0 ) { leapyear[i] <- "no" }
+  if( years[i] %% 400 == 0 ) { leapyear[i] <- "yes" }
+}
+
+
+leapyear[c(1000,1100,1104,1200)]
+
+leapyear[c(2018,2020,2100,2200,2300,2400,2404)]
+
+tail(leapyear)
+
+table(leapyear)
+
+
+```
+
+**Grading:**  3 points.  
+
+
+**************
+
+Question 5:  Starting with any positive integer `n`, imagine forming a sequence of integers in the following way:
+
+* if `n` is even  (i.e.  `n%%2==0` evaluates to `TRUE`), divide it by 2
+* if `n` is odd   (i.e.  `n%%2==0` evaluates to `FALSE`), multiply it by 3 and add one 
+* repeat
+
+For example if `n` starts out to be 5 (odd), the next value is 16 (`=3*5+1`), followed by 8 (`=16/2`), followed by 4 (`=8/2`), then 2 (`=4/2`), then 1 (`=2/1`), then 4 (`=3*1+1`), then the series repeats 2, 1, 4, 2, 1, 4, 2, 1, etc., indefinitely.   
+
+An open question in mathematics is whether, eventually, this sequence will ALWAYS end up repeating 4, 2, 1, 4, 2, 1, indefinitely regardless of the starting value `n`.  Exploring this computationally is easy (as of 2017, sequences made from starting values up to `87 * 2^60` do eventually repeat), but according to top mathematicians, proving it does in general "is an extraordinarily difficult problem, completely out of reach of present day mathematics."  https://en.wikipedia.org/wiki/Collatz_conjecture
+
+
+a)  Imagine we start with `n<-531`.  The next value of `n` is 1594, then 797, then 2392, etc.  Use a `for` loop to place into the elements of the vector `n` the values in this sequence (so `n[1]` is 531, `n[2]` is 1594, `n[3]` is 797, etc.).  Make 100 elements.  Hint:  since we already have `n[1]`, loop over the positions 2, 3, ..., 100.  Print to the screen `head` and `tail` once you are done.  A small sanity check is provided.
+
+
+```{r Q5a}
+n <- 531
+for (i in 2:100) { 
+  if(n[i-1]%%2==0) { n[i]<- n[i-1]/2 } else { n[i] <- 3*n[i-1]+1 }
+}
+head(n); tail(n)
+
+n[25:30]
+
+
+```
+
+**Grading:** 2 points.  
+
+
+b)  Clearly, it's going to take "a while" for the series started in (a) to reach 1.  Use what you wrote in (a) as the basis for a `while` loop that continues making new elements of `n` until 1 is produced.  Hint:
+
+* Start out by left-arrowing `n <- 531`, the first elements of the series.
+
+* Left-arrow `i` to be 1 (this will be the position of `n` that we'll be left-arrowing with a new value).
+
+* Set up the `while` loop so that the logical being checked is "while the `i`-th element of `n` is not 1" ...
+
+* Update your equation from (a) so that you left-arrow into `n[i+1]` some quantity that depends on `n[i]`.
+
+* After your line defining `n[i+1]`, but before the curly brackets of the `while` loop end, increment `i` by 1 (i.e., `i <- i+1`) so next time through the loop (if necessary), it'll be working on the next element of `n`.
+
+Print to the screen the contents of `n` once the loop terminates, and print to the screen the number of elements in `n`.  The same sanity check from (a) applies.
+
+```{r Q5b}
+
+n <- 531
+i <- 1
+while (n[i] != 1) { 
+  if(n[i]%%2==0) { n[i+1]<- n[i]/2 } else { n[i+1] <- 3*n[i]+1 }
+  i <- i+1
+}
+n
+
+length(n)
+
+n[25:30]
+
+```
+
+**Grading:** 2 points.  
+
+
+
+
+c)  Sometimes it takes a long time for the series to reach 1, other times it's quite fast.  Let's find out how long it takes for every starting value from 5 to 100.  
+
+* Define an empty vector called `howlong`
+
+* Use a `for` loop (I suggest naming the looping variable `start` and having the looping vector be the integer sequence `5:100`) to define the `start`-th element of `howlong` as the length of the sequence when it is started with the number `start`.  
+
+*  In other words, use your code from (b) as the code inside the curly brackets of a `for` loop, but instead of starting out the sequence by left-arrowing `n` to be 531 like you did in (b), start out the sequence by left-arrowing `n` to be .... (figure this out).  
+
+*  Outside the `while` loop (but inside the `for` loop), i.e. once you know how long the sequence is, left-arrow the `start`-th element of `howlong` to be the `length(n)` of the sequence.
+
+Once you are done, print the contents of `howlong` to the screen as well as `plot(howlong,type="l",xlab="Starting Number",ylab="Length of Sequence")`.  A small sanity check is provided.
+
+**Optional:** If you find these sorts of things interesting and are curious like me, try out starting values of the sequence out to 1000 and make the plot (don't need to include it in the writeup), and you'll see there's not really a strong relationship between the length of the sequence and its starting value.
+
+```{r Q5c}
+howlong <- c()
+for ( start in 5:100) { 
+  n <- start
+  i <- 1
+  while (n[i] != 1) { 
+    if(n[i]%%2==0) { n[i+1]<- n[i]/2 } else { n[i+1] <- 3*n[i]+1 }
+    i <- i+1
+  }
+  howlong[start] <- length(n)
+}
+plot(howlong,type="l",xlab="Starting Number",ylab="Length of Sequence")
+
+howlong
+
+howlong[68:75]
+
+```
+
+**Grading:**  1 point.  
+
+
+**************
+
+Question 6:  consider the following algorithmic trading strategy
+
+*  Wait until a stock has closed lower three days in a row (e.g. day 1 close is 36.5, day 2 close is 35.9, day 3 close is 35.8, day 4 close is 34.2).
+*  Buy the stock first thing the next morning (it's "bound" to eventually swing back up right?), then sell at the end of the day (e.g., if day 5 close was 36.2, then you've made 36.2 - 34.2 = 2 bucks).
+
+How well might this strategy do?
+
+a)  Use `read.csv` to read in `apple.csv` and left-arrow it to `AAPL`.  This is standard stock data, and we are given the date of the trading day, pricing information, volume traded, etc.  Use the relevant function from `lubridate` to convert the `Date` column into an actual date object, then overwrite `AAPL` with a subset of rows containing years of 2010 and later, i.e., the logical condition on rows in `subset` should be `year(Date)>=2010`.  Verify you produce the `summary` for the `Close` column in this subset and include the `plot` (syntax provided showing the evolution of closing price, but uncomment it once you get it working so it knits in).
+
+```{r Q6a}
+AAPL <- read.csv("apple.csv")
+library(lubridate)
+AAPL$Date <- ymd(AAPL$Date)
+AAPL <- subset(AAPL,year(Date)>=2010)
+summary(AAPL$Close)
+plot(Close~Date,data=AAPL,type="l")
+
+ 
+```
+
+**Grading:**  1 point
+
+
+
+b)  Left-arrow the `Close` column in the subset into a vector named `close`.  Then, create a vector called `trigger` (of equal length as `close`) containing `FALSE` (no quotes) for each element (use `rep`).  Your goal is to write a `for` loop that replaces the 4th, 5th, etc. elements of `trigger` with `TRUE` (no quotes) when the trading strategy is triggered.
+
+Studying the first 15 closing prices, we see that there is instance where the strategy is triggered:  the price goes from 27.54 (11th element) to 27.11 (12th element) to 26.64 (13th element) to 25.32 (14th element); three consecutive drops!  The `for` loop should thus end up putting a `TRUE` in the 14th element of trigger while leaving the 11th, 12th, 13th elements as `FALSE`.  The 15 element is 26.01, so when we sell at that price, a profit of 26.01 - 25.32 = 69 cents is made.
+
+Although there are a few ways to write "three consecutive drops" in logical terms, I highly recommend using a single `if` statement with three logical statements separated by "and"s.  
+
+Once you have completed your loop, print to the screen the result of running `head( which(trigger==TRUE) )` (first six elements of `trigger` that have `TRUE`) as well as `tail( which(trigger==TRUE) )`.  Also, print to the screen the total number of times the strategy is triggered.
+
+
+```{r Q6b}
+
+close <-AAPL$Close
+head(close,15)
+
+
+trigger <- rep(FALSE,length(close))
+for (i in 4:length(close) ) {
+  if(close[i] < close[i-1] & close[i-1] < close[i-2] & close[i-2] < close[i-3] ) { trigger[i] <- TRUE}
+  
+}
+trigger[c(443,456,466,476,511,513)]
+
+
+head( which(trigger==TRUE) )
+
+tail( which(trigger==TRUE) )
+
+sum(trigger)
+
+
+```
+
+**Grading:**  2 points 
+
+
+
+c.  Let's evaluate the overall effectiveness of the strategy.
+
+*  Left-arrow into a vector called `buy` the closing prices where the strategy was triggered (i.e. find the positions in `trigger` that are `TRUE`, then left-arrow into `buy` the values of `price` in the corresponding positions.  Then, left-arrow into a vector called `sell` the closing prices the trading day after the strategy was triggered (the value in `price` one position later).  Sanity checks are provided.  Determine the total profit (or loss) of this strategy (assuming one share was bought/sold each time).  
+
+```{r Q6c}
+buy <- close[which(trigger==TRUE)]
+sell <- close[which(trigger==TRUE)+1]
+sum(sell)-sum(buy)
+
+
+head(buy)
+
+tail(buy)
+
+head(sell)
+
+tail(sell)
+
+
+```
+
+**Grading:** 1 point 
+
+

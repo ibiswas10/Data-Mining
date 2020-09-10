@@ -1,0 +1,391 @@
+---
+title: "Homework 6 Spring 2019 - Clustering"
+author: "Ishan Biswas"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+#Do not change anything in this chunk
+options(width=150)
+knitr::opts_chunk$set(echo = TRUE,collapse=TRUE)
+library(igraph)  #Run install.packages("igraph") in the console window if it says its not found
+```
+
+*********************
+
+[//]:   (Instructions: )  
+
+```{r load in saved enviroment}
+#Make sure the .RData file is in your analytics folder along with this .Rmd file.  
+#If you're unsure where the .Rmd file is, do File then Save As and manually save it there.
+load("BAS474S19HW6.RData")  
+```
+
+[//]:  (Instructions:  for each question, write a line (or lines) of R code that, when the document is knitted, outputs the answer. For example, if the question asked to define a vector `x` which contained the integers 37 to 58 and to find the average of them, you would put the following in the code chunk.  Also *if I asked you to confirm that the average value of `x` was 47.5, make sure you have your code print out the result which "confirms" the result*).  
+
+```{r example response,include=FALSE}
+x <- 37:58
+mean(x)
+```
+
+
+************
+
+##Question 1:  Clustering Kroger Customers
+
+One key concern of business analytics practitioners is to ensure that the right products are being sold to the right customers at the right price and at the right time.
+
+The `KROGER` dataframe in the global environment (after loading in the .RData file) contains the spending habits of 2000 customers at Kroger over the span of two years (this is why Kroger has a loyalty card; so it can track purchases over time!).  Specifically, it gives the *total amount of money each customer has spent on 13 broad categories of items* (alcohol, baby, meat, etc.).  Kroger would like to do some segmentation and cluster analysis to discover if there are "customer types"?  For example:
+
+* House-spouses that takes care of both the cooking and grocery shopping?
+
+* College students who buys cheap food and drinks that require minimal preparation?
+
+* Parents of newborns?
+
+* Casual shoppers buying products here and there?
+
+* Health-conscious shoppers?
+
+* Extreme couponers?
+
+The segments above may indeed exist, and if so, Kroger could fine-tune marketing and advertising campaigns to meet the needs of each group.  This is a much more effective strategy than using a single campaign designed for everyone.  However, we need to let the data suggest what clusters exist in the data instead of inventing nice-sounding groups of our own.
+
+*************
+
+1)  Include a histogram of the values in the `COOKING` column (butter, flour, etc.).  Look at (but do not include) the histograms of a few other columns.  By either using `apply` (look back at RProg4-Functions notes) or by writing a `for` loop, print to the screen the `max` of each column, and print to the screen the `min` of each column.  There are two reasons that designing a clustering scheme based on these recorded values is a bad idea.  Identify them (although you do not need to explain here WHY these two issues might potentially "mess up" the clustering scheme here since that's covered in the second part of this homework).
+
+
+```{r Q1 exploratory data analysis}
+hist(log10(KROGER$COOKING))
+
+apply(KROGER, 2, FUN = max)
+apply(KROGER, 2, FUN=min)
+
+```
+
+**Response 1:**  
+
+**Response 2:**  
+
+**Grading:**  (1.5 points total) 
+
+
+*************
+
+2a)  In the global environment you will find a function called `scale_dataframe` which takes a dataframe as an argument.  It outputs the dataframe with each numerical quantity scaled to have a mean of 0 and a standard deviation of 1.   Left-arrow the result of running  `scale_dataframe( log10(KROGER+0.01) )` into `KROGER.SCALED` (this will add a penny to each value in `KROGER`, then take the log10 of each value, then scale each column to have a mean of 0 and a standard deviation of 1).  Run `apply(KROGER.SCALED,2,mean)` and `apply(KROGER.SCALED,2,sd)` to verify that each column has been transformed and scaled.  
+
+Provide a histogram of `COOKING` as well as a "kernel density estimate" (a smooth, continuous version of a histogram) of the distribution of `COOKING` with `plot(density(KROGER.SCALED$COOKING),xlim=c(-3,3),ylim=c(0,0.6),main="Kernel Density of Scaled Cooking")`  to convince yourself that it is now more appropriate to do clustering.
+
+Comment on why it was necessary to add 0.01 before taking the log10.
+
+```{r Q2 data prep}
+
+
+
+```
+
+**Response:**  
+
+
+**Note:**  Although not every column looks perfectly symmetric, we're much better off than using the raw data values.
+
+**Grading:**  (1 pt. total)
+
+
+
+2b)  In business analytics, we often work with logarithms of values instead of the originally recorded quantities.  However, reporting results on the logarithm scale is confusing, so it's always necessary to transform any numbers we find interesting back to the original scale.  For example, a value 2 on the log scale translates back into a 100 on the original scale.  For each part, you are given a value on the log scale.  Convert this back into a number on the original scale.
+
+* 4.12
+* -2.77
+* 0
+* 1.2 (however, imagine that 3.2 was added to the number BEFORE the log was taken; i.e. 1.2 = log10( x + 3.2), solve for x )
+
+```{r Q2b}
+4.12
+10^4.12
+
+
+-2.77
+q<-10^-2.77
+
+
+0
+10^0
+
+1.2 #see special note above
+m<-10^1.2
+m-3.2
+
+```
+
+**Grading:**  (1 pt. total)
+
+
+*************
+
+3)  Let's try k-means clustering.  Produce the "elbow plot" exploring values of `k` from 1 to 20 taking `iter.max=30` and `nstart=25`.
+
+```{r Q3 auditioning k}
+
+
+
+
+```
+
+
+a)  What does the `iter.max` parameter control about the algorithm?
+
+**Response:**  
+
+
+b)  What does the `nstart` parameter control about the algorithm and why is this parameter even necessary? 
+
+**Response:**  
+
+
+c)  In a sentence (and without getting into technicalities), what is the `WCSS` trying to measure about the clustering scheme?
+
+**Response:**  
+
+
+.
+
+d)  We look at this "elbow plot" to see if any clusters exist due to natural structure in the data.  In business analytics, individuals rarely naturally separate into distinct groups, and this case is no exception.  In the `idealWCSS` vector below, replace the 6 `NA` with actual numbers so that when `idealWCSS` is plotted vs `k` the natural structure in the data would suggest 4 clusters.
+
+```{r Q3 ideal elbow}
+
+
+
+```
+
+**Grading:**  (3 pts total) 
+
+
+*************
+
+4)  Since there is no natural choice for the number of clusters here, let's choose k=3.  Run `kmeans` on `KROGER.SCALED` with `centers=3`, `iter.max=30`, and `nstart=25`, left-arrowing the results in `KMEANS`.  
+
+a.  Print to the screen the contents of `round(KMEANS$centers,digits=2)` to see the locations of the cluster centers and `table(KMEANS$cluster)` to get a frequency table of how many individuals are in each cluster.   Note:  the labels 1/2/3 of the cluster identities may change every time you run `kmeans`, but you should always end up with the same values for the cluster centers.
+
+```{r Q4 k means with k of 3}
+
+
+
+
+```
+
+b.  Kroger is interested in using the cluster identities to aid in identifying segments where customized offers could be designed (e.g., people who cook, people with pets, people with babies, etc.).  While the clustering scheme you just found is valid from a technical, algorithmic point of view, the end result is not very interesting, and definitely not useful for Kroger's application.  Determine how the each cluster differs from each other, then explain why Kroger would not find this clustering scheme useful.  *This is by far the most important question on this homework.*
+
+**Response:**  
+
+
+
+**Grading:**  (3 pts total) 
+
+
+
+*************
+
+
+5)  For targeted advertising, it probably makes more sense to cluster on the *fraction* of the total money spent by the customer on each of the categories (instead of the raw amount).  If we find a segment that spends a much larger fraction of their shopping budget on baby items, we can target them with baby-specific promotions, etc.  
+
+Copy `KROGER` (whose contents shouldn't have been modified since the data was read in) into a data frame called `FRACTION`.  Then, write a `for` loop that defines the values in row `i` of `FRACTION` to be the fractional amounts of the values in the `i`th row of `KROGER`.   For example if `x` is a vector of the 13 dollar amounts, then `x/sum(x)` would be a vector giving these 13 fractional amounts.
+
+Verify that the sum of each row of `FRACTION` is 1 (i.e., print to the screen the result of running `summary(apply(FRACTION,1,sum))`, which translated into English means "summarize the row totals of each row of the `FRACTION` dataframe"), then NULL out the `OTHER` column from `FRACTION` (one of the 13 columns is now redundant since the values in a row add to 1, so might as well get rid of the least interesting one), then left-arrow `scale_dataframe( log10(FRACTION+0.01) )` into `FRACTION.SCALED` and provide a summary of `FRACTION.SCALED$COOKING`.
+
+```{r Q5 fraction}
+
+#Sanity check for number of columns of FRACTION.SCALED to make sure OTHER is nulled out
+#dim(FRACTION.SCALED)
+#2000   12
+#Sanity check for summary of COOKING column of FRACTION.SCALED
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#-4.4567 -0.4174  0.1612  0.0000  0.6063  3.3074 
+```
+
+**Grading:**  1pt; if this one is wrong, the following problems will end up being wrong as well.
+
+
+*************
+
+
+6)  Instead of running `kmeans` to get clusters, let's try hierarchical clustering this time.  Run `hclust` with arguments `dist(FRACTION.SCALED)` and `method="ward.D2"` (my favorite way of measuring distance between clusters).  Provide a plot of the dendrogram, then explain in a sentence in non-technical terms how `ward.D2` measures distance between clusters.
+
+```{r Q6 hierarchical clustering}
+
+
+
+```
+
+**Response:**  
+
+**Grading:** 0.5 points
+
+
+*************
+
+
+7)  There's no extremely long uninterrupted set of vertical lines, so there's no obvious, natural choice for the number of clusters that reflects underlying structure.  When this is the case, we choose a small value for the number of clusters and interpret them.  Then, we add a cluster and see if the new cluster adds to our understanding of the problem, etc. 
+
+Left-arrow `FRACTION.SCALED` into `FRACTION.SCALED.WITH.ID` and add columns `k3`, `k4`, and `k5` to it which contain the cluster identities (found from `cutree`) when 3, 4, or 5 clusters are found.
+
+Using `aggregate`, find the average value of each column in `FRACTION.SCALED.WITH.ID` broken down by `k3`, again but broken down by `k4`, and again broken down by `k5` (e.g. `aggregate(.~k3,data=FRACTION.SCALED.WITH.ID,FUN=mean)`, etc.).  Put the `aggregate` command inside a `round()` function and print these averages to the screen to 2 digits. 
+
+```{r Q7 hierarchical clustering results}
+
+
+
+
+#Sanity check:  one row you'll see when breaking it down by k3
+#  k3 ALCOHOL  BABY COOKING DRINKS FRUITVEG GRAIN HEALTH HOUSEHOLD  MEAT   PET PREPARED SNACKS   k4   k5
+#1  1    0.08 -0.35   -0.14   0.04    -0.10 -0.01   0.27      0.23 -0.18  0.17    -0.04   0.12 1.52 1.55
+
+```
+
+**Grading:**  0.5 points
+
+
+*************
+
+
+8)  Looking at the centers for the three-cluster scheme, the only obvious cluster-defining characteristic is `BABY` (cluster 3 has a value of 2.02, wow!), though it's clear clusters 1 and 2 are distinct groups since the signs of almost all columns are opposite.  Look at the centers for the four-cluster scheme.  Identify which cluster (1, 2, or 3) has been "split in two", and comment on whether our understanding of the households increases when going from 3 to 4 clusters.  At this point, we'd try out 5 clusters, characterize the new clusters that emerged, determine if they are useful, etc., but you don't have to write anything for this here.
+
+**Response:**  
+
+
+**Grading:**  1 pt total. 
+
+
+
+*************
+
+9)  Kroger finds the five cluster scheme to be most interesting and useful.  Characterize each of the 5 clusters with a short, meaningful description (e.g., fast-food junkies who spend most of their money on snacks and prepared food).  Clusters 1 and 2 don't have any obvious single-variable defining characteristics (nothing less than -1 or greater than 1).  Cluster 1 looks like your "average" shopper (about average in every category).  For Cluster 2, look for patterns across variables for what set of variables are "a bit above average" and "a bit below average" and tell a story.  In tandem to interpreting the output from (7), also left-arrow `KROGER` into `KROGER.HC`, then add the cluster identities in the 5 cluster scheme in a column named `k5`, then use `aggregate` to look at the median value for each category, rounded to the nearest dollar.
+
+```{r Q9}
+
+
+
+```
+
+* Cluster 1 - "average shopper" (no real cluster-defining characteristics)
+
+* Cluster 2 - 
+
+* Cluster 3 - 
+
+* Cluster 4 - 
+
+* Cluster 5 - 
+
+**Grading:**  1 pt total
+
+
+*************
+
+
+###Question 2:  
+Check out the Distance Metrics section of the notes and look for others with the title containing the phrase Step Back.
+
+a)  The distributions of variables are typically scaled before clustering takes place.  Why is that and what might happen if they are not scaled?
+
+**Response:**  
+
+
+b)  Often, the distributions of variables we want to use to discover clusters are quite skewed.  If we don't try to symmetrize the distributions of these variables, and just calculate distances based on the original values, what problem might arise?  In other words, what might be "bad" about the resulting clusters?
+
+**Response:**  
+
+
+c)  The vertical axis on dendrograms is labeled "Height" which I think is a bit of a misnomer.  What does "Height" refer to if the merging criteria is "complete linkage"?  What about "single linkage"?  In other words, if we see two clusters merge at a "Height" of 10, what does that tell us?
+
+**Response:**  
+
+
+d)  When clustering, you'll try kmeans with a few values of k, you'll look at a few hierarchical clustering schemes, and maybe a few other schemes.  How do you know which choice of clustering scheme is correct?
+
+**Response:** 
+
+
+
+
+**Grading:**  (4 pts total)
+
+
+
+
+***************
+
+
+###Question 3:  Hierarchical clustering process
+
+Below is the distance matrix for a dataset with 5 individuals.  We see that individuals 2 and 4 are separated by a distance of 5.6.  Individuals 5 and 1 are separated by a distance of 9.7, etc.  When hierarchical *complete-linkage* clustering takes places, each individual starts out in their own cluster, then clusters get merged together.   **What is the order in which individuals/clusters get merged?**   Note:  you will want to have a piece of scratch paper and write out how it proceeds.  It's nearly impossible to just look at the matrix and figure it out.  It's fine to do work on scratch paper, take a picture with your phone, then paste that into the Word document created after knitting.
+
+```{r Q3 hc,eval=FALSE}
+  2    3    4    5
+1 6.5  6.0  8.9  9.7
+2      3.7  5.6  5.1
+3           9.1  8.7
+4                1.8
+```
+
+Note:  I expect an answer like:   1.  1-2 get merged together;   2.  3-5 get merged together;  3.  The 1/2 and 3/5 clusters get merged together;   4. the 1/2/3/5 cluster and 4 get merged together.
+
+
+
+
+
+**Grading:**  1 point.  
+
+
+
+*************
+
+###Question 4:  A different way of approaching clustering
+
+Social network analytics is a burgeoning application of data mining.  Let's make a "social network" of the individuals in the `SPENDERS` dataframe (these are a subset of customers who have spent money on all 13 categories) by connecting them if they have similar spending habits.  
+
+Let `CONNECTED` be a matrix that initially contains all 0s and has 72 rows and 72 columns (equal to the number of individuals in `SPENDERS`).  The value `CONNECTED[i,j]` will be 1 if individuals `i` and `j` are connected in the network, and 0 if not.  Let's come up with a way to determine if two shoppers are connected.
+
+Let `xA` be the values in the `i`-th of `SPENDERS` after using `as.numeric` on that row to convert it to a vector of numbers.  Let `xB` be the values in the `j`-row.  Let us treat these shoppers as connected if `mean( abs(xA-xB)/pmax(xA,xB)  ) < 0.30 `, i.e. if the average percentage difference in the amounts of money spent on the categories is less than 30%.
+
+Use a nested `for` loop to define each element of `CONNECTED` accordingly.  Then, make all "diagonal" elements equal to 0 with `diag(CONNECTED)<-0` (we don't want a shopper connected to itself).  Confirm that you can pass the two sanity checks by printing them out to the screen!
+
+Then, convert this matrix into something that the `igraph` package can work with, then plot the "social network".  Note:  the plot will probably look small and like junk when knitted, but that's ok!
+
+You'll see a bunch of structure emerge that illustrates relationships between shoppers that behave similarly in terms of their total spending.  There's too many clusters to be useful here (some very small), but it gives you an idea of the things you can do with social network analytics!
+
+
+```{r Q4 social network}
+
+
+
+
+
+
+
+
+#Sanity check on some entries of CONNECTED
+#CONNECTED[51:57,63:69]
+#      [,1] [,2] [,3] [,4] [,5] [,6] [,7]
+# [1,]    0    1    0    0    0    0    1
+# [2,]    0    0    0    0    0    0    0
+# [3,]    0    0    0    0    0    0    0
+# [4,]    0    0    0    0    0    0    0
+# [5,]    0    0    0    0    0    0    1
+# [6,]    0    0    0    0    0    0    0
+# [7,]    0    0    0    0    1    0    0
+
+
+
+#Sanity check on mean value of CONNECTED
+#[1] 0.03125
+
+# Uncomment the following two lines after you have your CONNECTED matrix set up.
+#If you can't get CONNECTED, leave the following two lines commented out
+# GRAPH <- graph_from_adjacency_matrix(CONNECTED,mode="undirected")
+# set.seed(474); plot.igraph(GRAPH, edge.arrow.size=3, vertex.size = 8, vertex.label.cex = 0.5)
+```
+
+**Grading:** (1.5 pt total) 

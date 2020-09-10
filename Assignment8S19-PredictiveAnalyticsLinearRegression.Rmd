@@ -1,0 +1,371 @@
+---
+title: "Assignment 8 - Topics in Predictive Analytics"
+author: "Student"
+date: "due Tuesday April 2 by 11:59pm"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+#do not change this code
+##IMPORTANT NOTE## The warning=FALSE will become increasingly important from here on out since 
+#we don't need to see the warnings when knitting.  As you have worked through your code you will 
+#have verified its doing what it should be doing
+knitr::opts_chunk$set(echo = TRUE,collapse=TRUE,warning = FALSE)
+library(regclass)
+library(caret)
+load("Homework-PredictiveAnalytics.RData")
+```
+
+1.  (Optional; NOT GRADED - a question from the conceptual exam).  In the global environment (make sure you have loaded in `BAS474HW8S19.RData`), there is a dataframe called  \texttt{DIET} with 26 columns (named after a participant in a weight-loss study) and 52 rows (weight after each week of being on a diet).  Consider the following lines of code.  Translate them into a `for` loop.  Run `names(DIET)` after running your loop to verify the column names have been changed.
+
+
+```{r Q1}
+#   z <- "A"
+#   names(DIET)[1] <- paste("Person",z,sep="")
+#   z <- "B"
+#   names(DIET)[2] <- paste("Person",z,sep="")
+#   ...  #skipping many many lines
+#   z <- "Y"
+#   names(DIET)[25] <- paste("Person",z,sep="")
+#   z <- "Z"
+#   names(DIET)[26] <- paste("Person",z,sep="")
+
+names(DIET)
+
+```
+
+**Grading:**  Not graded
+
+**********
+
+2.  The `PRODLAUNCH` dataset records the profit (`Profit` column) of 652 newly released products after the first few months of their release.  A total of 20 predictor variables (`x1`, `x2`, ..., `x20`) may contain some predictive power regarding the product's `Profit`.  The boss wants a very simple model for predicting profit:  only at most two predictor variables (e.g. predicting `Profit` from `x4` and `x12`).  A nested `for` loop is a great way to try out each combination of predictors.
+
+a.  Run `summary` on `PRODLAUNCH[,c(1,5,16)]` to verify that these three columns are the `Profit`, `x4`, and `x15` predictor variables.  You'll see that `x15` has 0s for each value.
+
+```{r Q2a}
+
+```
+
+b.  Using the random number seed `474`, split the data into 50% training and 50% holdout.  Verify the summaries on the `Profit` column are as provided.
+
+```{r Q2b}
+
+
+
+
+
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.   #TRAIN
+#  3.544   3.875   4.211   4.270   4.623   5.808 
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.   #HOLDOUT
+#  3.544   3.875   4.176   4.258   4.577   6.093 
+```
+
+c.  For this problem, we'll revisit how we fit models in BAS 320:  using `lm`!  Recall that the syntax for predicting a variable named `y` from ALL variables in a dataset named `DATA` is `lm(y~.,data=DATA)`.  Adapt this syntax so that `~.` is  used as the formula and the three appropriate columns of `TRAIN` are used for the `data=` argument.   Verify the `summary` of the model produced is as below.  Figure out and explain why all values in the `x15` of `summary` only has `NA`s.
+
+
+```{r Q2c}
+
+
+
+
+
+#Coefficients: (1 not defined because of singularities)
+#             Estimate Std. Error t value Pr(>|t|)    
+#(Intercept) 3.999e+00  2.725e-02  146.76   <2e-16 ***
+#x4          6.238e-07  3.872e-08   16.11   <2e-16 ***
+#x15                NA         NA      NA       NA    
+```
+
+**Response:**  
+
+
+
+d.  The `RESULTS` matrix produced below is set up so that you can record the RMSE on the holdout sample for all models that contain at most two predictors (the value in the row labeled x2 and column labeled x3 will be the RMSE on the holdout when x2 and x3 are used as predictors; the value in the row labeled x1 and column labeled x1 will be the RMSE on the holdout when x1 and x1, i.e., just x1, are used as predictors).  
+
+Use a nested `for` loop to fill in its entries.  Note:  you'll receive numerous warnings saying `prediction from a rank-deficient fit may be misleading`, but this is ok (it's just letting you know that R had trouble estimating the coefficients for the model).  Produce the two sanity checks and determine which model happens to do the best on this holdout sample.
+
+Hint:  you'll likely need an `if` statement.  If your looping variables are named `i` and `j`, then you'll want to check whether `i` equals `j`.  If it does, predict the profit from the single relevant variable.  If not, predict the profit from both relevant variables.
+
+
+
+```{r Q2d,warning=FALSE}
+RESULTS <- matrix(0,nrow=20,ncol=20); rownames(RESULTS) <- colnames(RESULTS) <- paste("x",1:20,sep="")
+RESULTS[ c(1:3,18:20), c(1:3,18:20) ]
+
+
+
+
+
+
+#  RESULTS[1:3,1:3]
+#          x1        x2        x3
+#x1 0.5076300 0.3973044 0.4194038
+#x2 0.3973044 0.4017929 0.3765906
+#x3 0.4194038 0.3765906 0.4207508
+
+
+#  RESULTS[18:20,9:11]
+#           x9       x10       x11
+#x18 0.5004389 0.5052714 0.5039721
+#x19 0.5019510 0.5073329 0.5026891
+#x20 0.5064227 0.5114881 0.5085143
+
+
+```
+
+**Response:**  
+
+
+
+**Grading:**  4 points total.
+
+************
+
+3.  "Overfitting" is often our biggest fear when we develop a predictive model.  In package `regclass`, `overfit_demo` provides an illustration that shows what happens when a model becomes "overfit" as it gets overly complex (by adding too many variables).  Run `overfit_demo` as set up below.  The "AIC" is a measure of how "close to the truth" the model is (discussed at length in BAS 320), and it's closely related the RMSE on the training data.  For this example, what is the optimal level of complexity (number of predictors) for this model?
+
+```{r Q3}
+library(regclass)
+data(OFFENSE)
+overfit_demo(OFFENSE,y="Win",seed=1111)
+```
+
+**Response:**  
+
+
+**Grading:** 1 point
+
+
+************
+
+4.  Learning how to specify the model you want to fit is a necessary skill for linear regression models!  Imagine the predictors are `x1`, `x2`, ..., `x50` and the variable we want to predict is `y`.  Fill in to the right of the `~` an appropriate "formula" so that the model predicts `y` from the combination of specified variables.  For example `y~x1` would predict `y` only from `x1`.
+
+* All 50 predictor variables:  `y ~   . `
+
+* All 50 predictor variables as well as their two-way interactions:  `y ~ .^2  `
+
+* All 50 predictor variables except x2 and x27:  `y ~  . -x2 - x27   `
+
+* Just x12, x42, and x46:  `y ~ x12 + x42 + x46     `
+
+* Just x12, x42, and x46, as well and their two way interactions:  `y ~ (x12* x42* x46)     `
+
+* All 50 predictor variables except x33 and x49, and also including two-way interactions between x2 and x3, and between x4 and x5:  `y ~     `
+
+
+**Grading:** 3 points
+
+************
+
+5.  Consider the `VALUE` data.  Using the `lm` function (not `train` from `caret`), fit a multiple regression model predicting `CustomerLV` (a customer's total lifetime value to a company) using all predictors (no interactions) on the entirety of the data.  Print to the screen a `summary` of the fitted model and then *interpret* the coefficients of:
+
+* `TotTransactions` - the total number of transactions made by the customer
+
+* `GenderMale` - an indicator variable (1 = male, 0 = female)
+
+* `Incomef30t45` an indicator variable (1 = yearly income is between 30 and 45K, 0 = otherwise; reference level is `f0t30` which means 30K or less)
+
+```{r Q4}
+DF <- data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100), x3 = rnorm(100))
+
+
+
+```
+
+
+**Responses:**
+
+* `TotTransactions`:  
+
+
+* `Gendermale`:  
+
+
+* `Incomef30t45`:  
+
+
+**Grading:** 3 points
+
+
+************
+
+6.  In nearly every example we will do, the split into training and holdout samples is done with the `sample` command so that which rows the two sets are picked at random.  Why can't we just, say, let the first 20% of rows in the data be the holdout sample?  Come up with an example where this would be a bad idea.  Hint:  whatever splitting method we use is "fine" as long as there is *no systematic difference in the characteristics of individuals* in the holdout sample and in the training samples.
+
+**Response:**  
+
+
+**Grading:** 1 point.
+
+************
+
+7.  "Piecewise linear regression" is a technique that assumes that the nonlinear relationship between `y` and `x` can be modeled with the right series of linear pieces.  Take for example the following relationship.
+
+```{r Q7 illustrationb,echo=FALSE}
+library(segmented)  # install.packages("segmented") on the command line, not in the chunk, if you need to install it
+plot(y~x,data=SEG)
+plot(S.underfit,add=TRUE,lwd=2,col="red")
+plot(S.justright,add=TRUE,lwd=2,col="blue")
+legend("bottomright",legend=c("2 pieces","3 pieces"),lty=1,col=c("red","blue"))
+```
+
+Overall the relationship between `y` and `x` is not linear, but between 1-5, 5-15, and 15-20 it looks like the relationship is well-described by a straight line (though with different slopes)!  The number of linear pieces is a "tuning" parameter of a piecewise linear regression model.  Let's refer to the number of pieces as `s` (short for "segments").
+
+Discuss how the "tuning parameter" `s` influences the bias-variance tradeoff by 
+
+a)  Discussing which choice of `s` (small vs. large) makes the model and its predictions "more sensitive" to the particular set of individuals that happen to be in the training data (and why)
+
+b)  Discussing whether increasing `s` makes the variance of model increase or decrease (and why)
+
+c)  Discussing whether increasing `s` makes the bias of the model increase or decrease.
+
+d)  Discussing how the "right" value of `s` should be chosen.
+
+**Responses:**  
+
+a)  
+
+
+b)  
+
+
+c)  
+
+
+d)  
+
+**Grading:** 2 points
+
+
+
+************
+
+8.  K-fold crossvalidation will be our go-to method for estimating the generalization error of a predictive model, but there are other techniques.  The "bootstrap" approach estimates the generalization error by generating "bootstrap training samples".   
+
+A bootstrap training sample is made by randomly selecting rows from the original training dataset.  This selection is done *with* replacement, so some rows gets picked more than once, and others don't get picked at all.  
+
+The error for a particular round of the bootstrap procedure is found by calculating the error made by a model fit on the bootstrap training sample when predicting values on the "leftover" rows (the ones in the original data that do not appear in the bootstrap training sample).  After all rounds are completed (and there can be hundreds), the errors for each round are averaged together to give a final estimate.
+
+To keep things simple, we'll just deal with a vanilla linear regression with no interactions.
+
+
+a.  Run the following chunk of code, which will random split up the rows from the `DOZER` data (goal is to predict the `Price` of a bulldozer at auction from its characteristics) into a training and holdout sample (60-40 split). 
+
+```{r Q8a}
+set.seed(474); train.rows <- sample( 1:nrow(DOZER), 0.60*nrow(DOZER) )
+TRAIN <- DOZER[train.rows,]; HOLDOUT <- DOZER[-train.rows,]
+```
+
+b.  Run the command `set.seed(2019); boot.train.rows <- sort( sample( 1:nrow(TRAIN), size=nrow(TRAIN), replace=TRUE ) )`.  This sets the random number seed, then randomly picks row positions (with replacement) of the `TRAIN` dataframe.  Print the contents of `boot.train.rows` to the screen (its a lot of output but it's ok to include this in your writeup), and you'll see that some positions appear more than once (e.g., 3, 7, 121) and some positions don't appear at all (e.g. 1, 2, 9).   Then print to the screen the result of running `(1:nrow(TRAIN))[-boot.train.rows]` and explain in English what these numbers represent.
+
+```{r Q8b}
+set.seed(2019); boot.train.rows <- sort( sample( 1:nrow(TRAIN), size=nrow(TRAIN), replace=TRUE ) )
+boot.train.rows
+(1:nrow(TRAIN))[-boot.train.rows]
+bt <- boot.train.rows
+bh <- (1:nrow(TRAIN))[-boot.train.rows]
+```
+
+**Response:**  
+
+
+
+c.  Using the results from (b), create a dataframe called `PSEUDO.TRAIN` which are the rows in `TRAIN` that appear in `boot.train.rows`.  Create a dataframe called `PSEUDO.HOLDOUT` which contains all rows in `TRAIN` that do not put in `PSEUDO.TRAIN`. Verify you pass the sanity checks by printing to the screen the results of running `head` on `PSEUDO.TRAIN` and `summary` on `PSEUDO.HOLDOUT`
+
+```{r Q8c}
+PSEUDO.TRAIN <- TRAIN[bt,]
+PSEUDO.HOLDOUT <- TRAIN[-bt,]
+
+#Sanity Checks
+
+dim(PSEUDO.TRAIN)
+#554   6
+
+PSEUDO.TRAIN[c(1,10,100),]
+#     Price YearsAgo Usage Tire Decade BladeSize
+#454 102500     0.07  7296   14  2000s        14
+#479 110000     0.06  7016   14  2000s        12
+#10   58000     1.30 24681   14  1980s        14
+
+dim(PSEUDO.HOLDOUT)
+#206  6
+summary(PSEUDO.HOLDOUT)
+#     Price           YearsAgo          Usage            Tire                   Decade     BladeSize    
+# Min.   :  8500   Min.   : 0.030   Min.   :    7   Min.   :13.00   1960s and 1970s:17   Min.   :12.00  
+# 1st Qu.: 47625   1st Qu.: 0.750   1st Qu.: 3710   1st Qu.:14.00   1980s          :33   1st Qu.:12.25  
+# Median : 75000   Median : 1.215   Median : 6778   Median :14.00   1990s          :70   Median :14.00  
+# Mean   : 74915   Mean   : 1.729   Mean   : 7717   Mean   :15.14   2000s          :86   Mean   :13.61  
+# 3rd Qu.: 97375   3rd Qu.: 2.480   3rd Qu.:10392   3rd Qu.:15.50                        3rd Qu.:14.00  
+# Max.   :142000   Max.   :15.000   Max.   :45989   Max.   :23.50                        Max.   :16.00  
+```
+
+d.  Using the `lm` function (not `train` from `caret`), fit a multiple regression model predicting `Price` using all predictors (no interactions) on `PSEUDO.TRAIN`, then store its predictions on the holdout sample in a vector called `pred.holdout`.  Produce a `summary` of the predictions and confirm you get the same numbers.
+
+
+```{r Q8d}
+
+
+
+
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#  26902   68596   78792   78116  101179  119810 
+```
+
+e.  Use the predicted values and calculate the RMSE on this pseudo-holdout sample.  Hint:  a vector of the squared errors can be produced with `(pred.holdout-PSEUDO.HOLDOUT$Win)^2`.  If you take the average of that vector, then take the square root, you have the RMSE (it should be a little over 23000)!
+
+```{r Q8e}
+
+
+
+
+
+```
+
+f.  Now write a "for" loop that finds the RMSEs of models trained on 500 bootstrapped training samples.  You've already written almost all the code you need.  
+
+*  Outside the "for" loop, initialize `boot.rmse` to be an empty vector
+*  Set up the loop so your looping vector is the integer sequence 1, 2, ..., 500
+*  Store in the i-th element in `boot.rmse` the RMSE found during the i-th time through the loop 
+*  Make sure to have `set.seed(2019);` on the same line as (and immediately *before*) the `for` loop (but nowhere else) so that the same random set of bootstrap samples are generated for all of us.  
+
+Report the average value of `boot.rmse` and its standard deviation (this is the estimated generalization error and the SD), and make a histogram of `boot.rmse`.  Note:  this loop will take a while to run (and thus make the knitting process take a while).  Instead of looping over `1:500` once you think you've worked out the logic, try looping over `1:5` first to make sure it proceeds smoothly.
+
+
+```{r Q8f}
+
+
+
+
+```
+
+**Additional SideNote:**  This bootstrapped estimate of the generalization error can be found with `caret` using `method="boot"` instead of `method="cv"` or `method="repeatedcv"`!  For reasons that aren't completely clear to me, people tend to prefer crossvalidation instead of this bootstrap approach.
+
+
+**Grading:** 4 points.  
+
+
+************
+
+9.  Three models are being considered.  The estimated generalization errors of each have been found with crossvalidation.  When answering the following questions, find and report the number of standard deviations that separate the two models' errors (remember to use the larger of the two standard deviations).
+
+* Model A has an estimate of 25.3 with an SD of 3.2
+
+* Model B has an estimate of 29.1 with an SD of 3.5
+
+* Model C has an estimate of 31.9 with an SD of 2.2
+
+```{r Q9}
+#math if you need it
+
+
+```
+
+a)  According to the one standard deviation rule, is there a preference between Model B and Model C?  Explain.
+
+**Response:**  
+
+b)  According to the one standard deviation rule, is there a preference between Model A and Model B?  Explain.
+
+**Response:**  
+
+
+**Grading:** 2 points

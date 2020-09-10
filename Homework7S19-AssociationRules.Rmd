@@ -1,0 +1,392 @@
+---
+title: "Homework 7 - Association Rules"
+author: "Ishan Biswas"
+date: "due 6/22/20 BY 5 PM so that solutions can be posted immediately"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,collapse=TRUE)
+options(width=120)
+options(digits=3)  ###NOTE:  DO NOT RUN THIS LINE, it is here to make knitting prettier
+                   ###If you do run this line and see fewer digits than you should, run options(digits=7) to reset
+
+library(arules)
+library(arulesViz)
+library(regclass)
+```
+
+**Important Note 1:**  Note the due date of 5pm instead of 11:59pm.  This is so that you all have a few hours that evening, and most of the date the next day on Wednesday to review the solutions and to study for our exam Wednesday March 13th from  6:30pm to 8:30pm.  
+
+**Important Note 2:**  For this assignment, some of the R output will be awkwardly formatted.  Please go to your Word document after knitting, highlight the code/output in R chunks that "look bad" by spilling over onto the next line, and decrease the font size (I suggest 6pt) so it fits on one line.  Even then, some chunks are still going to look ugly but that's ok.
+
+********************************************
+Towards a Recommendation Engine for Music
+********************************************
+
+The file `musiclikesmod.csv` contains information on users of last.fm (https://www.last.fm/), an online service that lets you stream music.  It also makes recommendations on what songs you might like based on your listening history (and that of your friends, if you share data).  By setting up the data appropriately, we can perform a "market basket analysis" to determine what combinations of artists are often enjoyed by the same listener.
+
+To convert this into a market basket analysis problem, we will treat each listener as "cart".  Each listener has a list of bands they like, and these bands can be thought of as "items in the cart".  Perhaps association rules exist like "If a listener likes Lady Gaga and Kelly Clarkson, then they may also like Katy Perry".
+
+In the data (which comes from 2011, so think of the music scene back then), there are 1821 "carts" (listeners) each of which contains one or more of 2459 unique items (bands).  Let's see what we can learn about listening habits!
+
+Run the following code (making sure this .Rmd file and the `musiclikesmod.csv` file are in the same folder; double-check by doing Save As and saving this document into your 474 folder where you've moved the data file).  This code will make a plot of the most frequently appearing bands.  You'll notice that some spelling liberties have been applied (P!nk is Pnk, Ke$sha is Keha, Beyonce is Beyonc, etc); basically all special characters and spaces have been removed.
+
+```{r read in data and setup and this takes a while to knit}
+#Read in data, making sure text is read in as text instead of categorical variables
+MUSIC <- read.transactions("musiclikesmod.csv",sep=",",format="basket")
+#Look at the top 20 frequently appearing product_ids
+itemFrequencyPlot(MUSIC,topN=20,type="relative",horiz=TRUE,cex.names=0.6)
+```
+
+**************
+
+##Question 1:
+
+There are 2459 unique bands, though many are very rare.  
+
+a.  Back in 2011, some of my favorite bands were `TheCure`, `Rush`, `PinkFloyd`, and `DreamTheater`.  What fraction of the 1821 listeners like `TheCure`?  How many total listeners liked Dream Theater?  Hint:  use `itemFrequency` for the two previous questions.  What fraction liked at least one of `Rush` or `PinkFloyd`?  Hint:  you'll need to find the number of transactions that have one or both of these items then divide by the number of transactions.  
+
+```{r Question1a}
+library(MASS)
+fractions(itemFrequency(MUSIC)["TheCure"])
+fractions(itemFrequency(MUSIC)["DreamTheater"])*length(MUSIC)
+fractions(itemFrequency(MUSIC)["Rush"]) + fractions(itemFrequency(MUSIC)["PinkFloyd"])
+```
+
+**Grading:**  (1.5 total):  0.5 pts each.  
+
+
+
+b.  How many bands have at least 80 listeners (i.e., how many bands have a support at least 80/1821; it's a little less than 150)?  If we considered ONLY rules of length 3 (If A and B, then C) with these bands, use the `choose` function to determine how many possible rules exist.
+
+```{r Question1b}
+interest <-which(itemFrequency(MUSIC) > 80/1821)
+length(interest)
+```
+
+**Grading:**  (1 total):  0.5 pts each.
+
+
+c.  Build a ruleset using this support (80/1821) and a minimum level of confidence of 60%.  Do not put any restrictions on the lengths of the rules.  Remove the redundant and non-significant ones (there should be 19981 rules left-over), then print out the top 10 rules in terms of lift to the screen.  
+
+```{r Question1c}
+rules <- apriori(MUSIC,
+                 parameter = list(confidence = 0.60,
+                                  supp = (80/1821)),
+                  control = list(verbose = FALSE))
+rules <- rules[!is.redundant(rules)]
+rules <- rules[is.significant(rules, MUSIC)]
+inspect(sort(rules, by = "lift")[1:10])
+```
+
+**Grading:**  1 pt. 
+
+
+d.  You should find that one of the top rules in terms of lift is `{HilaryDuff,Rihanna} => {AshleyTisdale}`.  81 listeners like this set of 3 artists.  First, explain how can you get the number 81 from the support of the rule.   Second, write a line of R code that produces this 81 by counting up the number of "transactions" that contain all 3 of these "items" (you'll need `length` and `which` along with `%ain$`).
+
+```{r Question1d}
+length(subset(MUSIC, items %ain% c("HilaryDuff","Rihanna","AshleyTisdale")))
+```
+
+**Grading:**  (1 pt. total)  0.5 each 
+
+
+e.  The rule `{HilaryDuff,Rihanna} => {AshleyTisdale}` has a confidence of 65%.  First, explain in English what the rule `{HilaryDuff,Rihanna} => {AshleyTisdale}` means.  Then, carefully interpret the confidence. 
+
+**Response:**  
+Given that a listener listens to HilarY Duff and Rihanna, 65% of the time these listeners also listen to Ashley Tisdale
+
+
+**Grading:**  (1 pt. total)  
+
+
+
+f.  The lift of the rule `{HilaryDuff,Rihanna} => {AshleyTisdale}` is about 7.2.  Interpret this value in two ways:
+
+1)  by commenting on how often these bands appear together in users' lists of likes compared to lists generated when users pick bands at random 
+
+
+**Response:**  
+Listeners' probability of listening to a certain artist given that they listen to other artists in the same genre is higher than at random. The support is low for the artist at random, but the confidence is higher because they are grouped together based on similarity and common listeners. 
+**Grading:**  1 pt.  This is pretty darn important.
+
+
+2) by calculating and commenting on probabilities of finding `AshleyTisdale` before and after knowing that both `Rihanna` and `HilaryDuff` is in the list of likes (this interpretation requires using the value of the lift and the support of `AshleyTisdale`).
+
+**Response:**  Given that someone has Hilary Duff and Rihanna on their list, the probability that they listen to Ashley Tisdale is 7.2 times more than the probability at random which is 8.95%.
+
+```{r Question1f}
+itemFrequency(MUSIC)["AshleyTisdale"]
+```
+
+**Grading:**  1 pt.  This is pretty darn important too.
+
+
+g.  If you run `table( inspect( rhs(RULES) ) )` (don't run it, it'll generate tremendous irrelevant output), you'd find that not that many bands are the consequent of the rules that were discovered.  Thus, there's not much room here for developing a "recommendation engine" (i.e., recommending bands based on the list of user's likes)
+
+```{r consequent,eval=FALSE}
+   {ArcticMonkeys}     {AshleyTisdale}      {AvrilLavigne}            {Beyonc}     {BlackEyedPeas}     {BritneySpears} {ChristinaAguilera} 
+                  1                   5                1197                2126                1093                1858                2513 
+    {JenniferLopez}         {KatyPerry}              {Keha}     {KellyClarkson}      {KylieMinogue}          {LadyGaga}           {Madonna} 
+                 64                1543                1324                 110                 693                1066                 871 
+      {MariahCarey}        {MileyCyrus}              {Muse}          {Paramore}               {Pnk}         {Radiohead}           {Rihanna} 
+                293                 815                   2                   6                 978                   2                1790 
+          {Shakira}       {TaylorSwift}        {TheBeatles}  {ThePussycatDolls} 
+               1227                  37                   5                 362 
+```
+
+Using a single line of code, print to the screen the 3 rules that involve `Muse` or `ArcticMonkeys` in the consequent.
+
+```{r Q1g}
+SUB <- inspect(subset(rules, rhs %in% c("Muse", "ArcticMonkeys")))
+```
+
+**Grading:**  1 pt.  
+
+h.  Remake the rules (call them `RULES.MINE`) so that the minimum support is 30/1821 (they have to apply to at least 30 listeners) and a minimum level of confidence of 0.25. Don't remove redundant/nonsignificant rules in this case.  Think of an artist (or artists) that you particularly liked back in 2011 (don't use one already studied) and see if any rules involved them on the left hand or right hand sides (do mind the spelling; special characters and spaces have been eliminated).  Print to the screen 5 of the rules, if any exist (they might not!).
+
+```{r Q1h}
+RULES.MINE <- apriori(MUSIC, 
+                 parameter = list(supp = (30/1821), 
+                                  conf = 0.25),
+                 control=list(verbose=FALSE))
+RULES.MINE
+inspect(RULES.MINE[1:10])
+
+createrules <- function(artist) {
+  SUB <- subset(RULES.MINE, rhs %in% artist |
+         lhs %in% artist)
+  return(inspect(sort(SUB, by = "lift") [1:5]))
+}
+createrules("TheBeatles")
+
+
+```
+
+**Grading:**  1 pt.   
+
+
+i.  Create `MUSIC2` and `RULES2` as follows, which contain association rules among more "obscure" bands (all users who listened to any of the top 20 most frequently listened to bands were eliminated).  Plot these rules with `set.seed(2018); plot(RULES2, method="graph", edgeCol = "black",cex=0.6, alpha=1)`
+
+Turns out these are associations between rock and metal bands!  What's interesting though is that the likes tend to come in clusters.  If you don't know much about this type of music, you might think that "all types of metal are the same".  Is it though?  The graph makes this clear, and this might not have been apparent from scanning the list of rules.
+
+* Do listeners of Metallica tend to listen to Iron Maiden (and vice versa)?  Yes or No, and how do you know?  **Response:**  
+Yes, listeners of Metallica tend to listen to Iron Maiden and vice verse, and this is apparent because the graph of 31 rules shows an arrow pointing to each other. 
+
+
+* Do listeners of Megadeth tend to listen to Black Sabbath or ACDC (and vice versa)?  Yes or No, and how do you know?  **Response:** 
+No, there is not connection between the bands in the graph of 31 rules. 
+
+
+```{r Question1i}
+#MUSIC2 becomes the lists that do NOT contain any of the top 20 most frequently appearing bands 
+MUSIC2 <- MUSIC[setdiff(1:length(MUSIC),which(MUSIC %in% names( sort( itemFrequency(MUSIC),decreasing = TRUE )[1:20]))) ]
+length(MUSIC2)
+RULES2 <- apriori(MUSIC2, parameter = list(supp = 15/235, conf = 0.5, maxlen=3),control=list(verbose=FALSE))
+RULES2 <- RULES2[!is.redundant(RULES2)]
+RULES2 <- RULES2[is.significant(RULES2,MUSIC2)]
+set.seed(2018); plot(RULES2, method="graph", edgeCol = "black",cex=0.6, alpha=1)
+
+
+
+```
+
+
+**Grading:**  0.5 pt.   
+
+
+
+
+**************
+
+##Question 2
+
+Remake the rules from `MUSIC`, but use the default parameters for everything (i.e., remove the argument `parameter = list(supp = 100/1821, conf = 0.65)`)  Remove the redundant and non-significant ones.
+
+a.  How many rules were found? 500
+
+b1.  How many rules have levels of confidence between 0.90 and 0.95 (inclusive)? 194
+
+b2.  How many rules have levels of confidence of 0.85 and above and lifts between 3 and 4 (inclusive)? 264
+
+c.  Print to the screen the rule that has the highest lift, which you'll find is Katy Perry + Miley Cyrus -> Kesha.  The output shows that this rule applies to 194 users, and that the rule has a confidence of 0.8508772.  How many users in the data like Katy Perry and Miley Cyrus but do NOT like Kesha?  While logic alone can provide this answer, if you need a push, try counting up the number of transactions with `%ain%` that have Katy Perry, Miley Cyrus, and Kesha, then count up the number of transactions that have Katy Perry and Miley Cyrus.
+
+
+d.  One artist that my sister and I grew up liking was `Madonna`.  What rules have `Madonna` (somewhere) in the antecedent while having lifts greater than 4 and confidences greater than 90%?  Print the four rules to the screen.  The consequent of these rules are all the same, and is an artist that I think is pretty ok.
+
+e.  Another artist my sister and I grew up with was `Prince`.  Do any rules involve him (on the left hand or right hand sides)?  If so, print them out.  If not, show that the `length` of the ruleset is 0.
+
+
+```{r Question2}
+
+
+#a
+rules <- apriori(MUSIC, 
+                 control = list(verbose = FALSE))
+rules <- rules[which(!is.redundant(rules))]
+rules <- rules[which(is.significant(rules, MUSIC))]
+
+#b1
+rules2 <- apriori(MUSIC,
+                  parameter = list(conf = 0.90),
+                 control = list(verbose = FALSE))
+rules2 <- rules2[which(!is.redundant(rules2))]
+rules2 <- rules2[which(is.significant(rules2, MUSIC))]
+
+rules3 <- apriori(MUSIC, 
+                   parameter = list(conf = 0.9500001),
+                 control = list(verbose = FALSE))
+rules3 <- rules3[which(!is.redundant(rules3))]
+rules3 <- rules3[which(is.significant(rules3, MUSIC))]
+
+length(rules2) - length(rules3)
+
+#b2
+length(subset(rules,
+              confidence >= 0.85 &
+                lift >= 3 &
+                lift <= 4))
+
+
+
+#c
+L1 <- subset(MUSIC, items %ain% c("KatyPerry", "MileyCyrus", "Keha"))
+L2 <- subset(MUSIC, items %ain% c("KatyPerry", "MileyCyrus"))
+length(L2) - length(L1)
+
+
+
+#d
+inspect(subset(rules, lhs %in% "Madonna" 
+               & lift >4 
+               & confidence > 0.90))
+
+#e
+length(inspect(subset(rules, lhs %in% "Prince" | rhs %in% "Prince")))
+
+
+```
+
+**Grading:**  3 points total, 0.5 each.  
+
+
+********************************************
+Additional Questions
+********************************************
+
+##Question 3:  
+
+Imagine that during the course of a market basket analysis that you find one item (for illustration, say it's granola bars) is the consequent of dozens of rules, but it never appears as an antecedent.  In other words, we see rules like cereal+coffee -> granola bars, but never rules like granola bars -> item.  What we might we do with this information?  One thing we could do is place granola bars strategically around the store near items involved in the rules in order to "prompt" people to buy them (I know my Food City has bananas in "random" places it seems, and maybe this explains why).   
+
+If we want to use these association rules to increase sales at the store, which course of action (or do both?) makes more sense based on the data and why:  
+
+a)  discounting granola bars (with the hopes of increasing the sales of the dozens of products involved in these rules)
+
+b)  having a promotion where you get a 25-cents off coupon for granola bars when you buy any of products that appear in the antecedent of the rules
+
+**Response:**  Plan B is the better option because we are offered a discount on granola bars only if we purchase products that are in the antecedent of the rules because they have an incentive to buy more. 
+
+
+**Grading:**  2 pts.  
+
+
+
+**************
+
+##Question 4:  
+
+Retrieve `groceries.csv` from Canvas (this is the grocery data discussed in class, and it comes from a New Zealand grocer).  Read in the data in transactional format (see the .R file that accompanies the lecture notes).  Make a ruleset so that each rule has at least 77% confidence, each rule applies to at least 25 transactions, and that have a maximum of 4 items in the antecedent (careful about the `maxlen` value).  Print to the screen the 7 rules that involve at least one dairy item ("butter","butter milk","whipped/sour cream","whole milk") in the antecedent or consequent, sorted by support (highest on top).
+
+```{r Q4}
+G <- read.transactions("groceries.csv", format = "basket", sep = ",", cols = NULL)
+G
+RULES <- apriori(G, 
+                 parameter = list(supp = 25/9835, 
+                                  conf = 0.77,
+                                  maxlen = 5),
+                 control=list(verbose=FALSE))
+
+RULES <- RULES[which(!is.redundant(RULES))]
+RULES <- RULES[which(is.significant(RULES, G))]
+
+milkymilk<- c("butter","butter milk","whipped/sour cream","whole milk")
+ice <- subset(RULES, 
+                rhs %in% milkymilk |
+                 lhs %in% milkymilk )
+ice
+inspect(ice)
+inspect(sort(ice, by = "support", decreasing = TRUE))
+itemFrequency(G)["whipped/sour cream"]
+
+
+```
+
+**Grading:** 2 pts. 
+
+
+
+**************
+
+##Question 5:  
+
+Unfortunately, the sizes of the three quality measures for association rules (support, confidence, and lift) don't have any *intrinsic* importance:  bigger isn't always more interesting.  In other words, sometimes a large confidence is interesting, sometimes it's not.  Sometimes a large lift is interesting, sometimes it's not, etc.
+
+a.  It is found that the rule { A, B } -> { C } has a confidence of 1 and a support of 0.12.  At first glance this sounds impressive:  12% of carts have items A, B, and C in them, and *every* time A and B are in a cart, we also find item C.  However, think of a scenario where a rule that has 100% confidence has absolutely no practical consequence.  Hint:  think about the support of C.
+
+**Response:** 
+{ Bread, Butter } -> { Milk }
+The 100% confidence for purchasing milk is not very significant because milk is one of the most common grocery purchases. The confidence can be interpreted as milk is found 100% of the time in the cart when bread and butter is in the cart. The support of 12% can be interpreted as the probability that all three items being in the cart. This proves that there is not much of a correlation between the items because milk is a very common grocery item. 
+
+
+**Grading:** 1 pt. 
+
+**************
+
+b.  The rule { A } -> { B } has a lift of 10.  At first glance, this sounds impressive:  given that item A is in the cart, the probability that B is there is 10 times higher than the probability had the identities of other items been unknown.  
+
+However, it is possible that this lift is not statistically significant and that the rule has absolutely no practical consequence.
+
+Come up with two scenarios where the lift of 10 IS, and where the lift IS NOT, statistically significant.  In other words, try out different values of n, nA, nB, nAB so that the lift if 10 (i.e. `lift(n,nA,nB,nAB)` gives 10) but `lift.significance(n,nA,nB,nAB,nrules=1)` returns `FALSE` (and another set of values where the lift of 10 but this returns `TRUE`).
+
+Hint:  let `n` equal 50000 (number of carts) and `nA` be 500 (number of carts with item A).  Statistical significance will be found when a LOT of carts have both items (`nAB` is relatively large) and non-significance is found when very few carts have both items (`nAB` is relatively small).
+
+
+```{r Q5}
+#n=number of carts, nA=number of carts with item A, nB=number of carts with item B
+#nAB=number of carts with both A and B
+lift <- function(n,nA,nB,nAB) { (nAB/n)/(nA/n*nB/n)}
+
+#n=number of carts, nA=number of carts with item A, nB=number of carts with item B
+#nAB=number of carts with both A and B, nrules = number of rules considered.  
+#Returns TRUE if statistically significant and FALSE otherwise.
+
+
+solvelift10 <- function(n,nA,nB) {
+  return(((nA/n)* (nB/n))*(10)*n)
+}
+solvelift10(50000,50,100)
+
+lift(50000, 50, 100, 1)
+lift(100, 10, 10, 10)
+lift.significance <- function(n,nA,nB,nAB,nrules) { (1-phyper(nAB-1,nA,n-nA,nB)) < .05/nrules }
+lift.significance(100, 10, 10, 10,1)
+
+
+```
+
+
+**Grading:** 1 pt. 
+
+**************
+
+c.  Normally, a lift of 1.25 does not get much attention because it is so close to 1.  However, think of a scenario (i.e., a number for the overall fraction of carts with item B in it) where the rule { A } -> { B } having a lift of 1.25 would imply that item B is in the cart with 100% certainty when item A is there.
+
+**Response:**  
+Having a lift of 1.25 implies that item B is in the car 100% of the time when A is there, which is the confidence. The support is 80% which implies that items A and B are in the cart at the same time. 
+
+
+
+
+
+**Grading:** 1 pt. 
